@@ -43,6 +43,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.21"
+          cache-dependency-path: service/go.sum
 
       - name: Generate embedded assets
         working-directory: service
@@ -50,8 +51,12 @@ jobs:
           go install github.com/go-bindata/go-bindata/go-bindata@v3.1.2+incompatible
           go install github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs@v1.0.1
           export PATH="$(go env GOPATH)/bin:$PATH"
+          rm -f bindata.go
           go-bindata-assetfs -o=assets/bindata.go -pkg=assets assets/...
+          rm -f bindata.go
 
       - name: Test
         working-directory: service
-        run: go test ./...
+        run: |
+          rm -f bindata.go
+          go test ./...
