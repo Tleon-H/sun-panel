@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { defineEmits, onMounted, ref } from 'vue'
+import { decideSearchConfirm } from '@/utils/search/filterIcons'
 import { NAvatar, NCheckbox } from 'naive-ui'
 import { SvgIcon } from '@/components/common'
 import { useModuleConfig } from '@/store/modules'
@@ -10,15 +11,19 @@ import SvgSrcBaidu from '@/assets/search_engine_svg/baidu.svg'
 import SvgSrcBing from '@/assets/search_engine_svg/bing.svg'
 import SvgSrcGoogle from '@/assets/search_engine_svg/google.svg'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   background?: string
   textColor?: string
+  localSearchEnabled?: boolean
+  matchCount?: number
 }>(), {
   background: '#2a2a2a6b',
   textColor: 'white',
+  localSearchEnabled: false,
+  matchCount: 0,
 })
 
-const emits = defineEmits(['itemSearch'])
+const emits = defineEmits(['itemSearch', 'moveMatch', 'openLocal'])
 
 interface State {
   currentSearchEngine: DeskModule.SearchBox.SearchEngine
@@ -91,6 +96,37 @@ function handleSearchClick() {
     window.location.href = fullUrl
 }
 
+function handleConfirm() {
+  const decision = decideSearchConfirm({
+    keyword: searchTerm.value,
+    localSearchEnabled: props.localSearchEnabled,
+    matchCount: props.matchCount,
+  })
+  if (decision === 'open-local')
+    emits('openLocal')
+  else
+    handleSearchClick()
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault()
+    if (!props.localSearchEnabled || props.matchCount <= 0)
+      return
+    emits('moveMatch', event.key === 'ArrowDown' ? 1 : -1)
+    return
+  }
+  if (event.key === 'Enter') {
+    event.preventDefault()
+    handleConfirm()
+    return
+  }
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    handleClearSearchTerm()
+  }
+}
+
 function replaceOrAppendKeywordToUrl(url: string, keyword: string) {
   // 如果网址中存在 %s，则直接替换为关键字
   if (url.includes('%s'))
@@ -100,8 +136,10 @@ function replaceOrAppendKeywordToUrl(url: string, keyword: string) {
   return url + (keyword ? `${encodeURIComponent(keyword)}` : '')
 }
 
-const handleItemSearch = () => {
-  emits('itemSearch', searchTerm.value)
+function handleItemSearch(event?: Event) {
+  const value = event?.target instanceof HTMLInputElement ? event.target.value : searchTerm.value
+  searchTerm.value = value
+  emits('itemSearch', value)
 }
 
 function handleClearSearchTerm() {
@@ -120,13 +158,13 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="search-box w-full" @keydown.enter="handleSearchClick" @keydown.esc="handleClearSearchTerm">
+  <div class="search-box w-full">
     <div class="search-container flex rounded-2xl items-center justify-center text-white w-full" :style="{ background, color: textColor }" :class="{ focused: isFocused }">
       <div class="search-box-btn-engine w-[40px] flex justify-center cursor-pointer" @click="handleEngineClick">
         <NAvatar :src="state.currentSearchEngine.iconSrc" style="background-color: transparent;" :size="20" />
       </div>
 
-      <input v-model="searchTerm" :placeholder="$t('deskModule.searchBox.inputPlaceholder')" @focus="onFocus" @blur="onBlur" @input="handleItemSearch">
+      <input v-model="searchTerm" :placeholder="$t('deskModule.searchBox.inputPlaceholder')" :aria-keyshortcuts="localSearchEnabled ? 'ArrowUp ArrowDown Enter Escape' : 'Enter Escape'" @focus="onFocus" @blur="onBlur" @input="handleItemSearch" @keydown="handleKeydown">
 
       <div v-if="searchTerm !== ''" class="search-box-btn-clear w-[25px] mr-[10px] flex justify-center cursor-pointer" @click="handleClearSearchTerm">
         <SvgIcon style="width: 20px;height: 20px;" icon="line-md:close-small" />
@@ -165,6 +203,9 @@ onMounted(() => {
         </NCheckbox>
       </div>
     </div>
+    <p v-if="isFocused && localSearchEnabled" class="leon-search-hint">
+      {{ $t('deskModule.searchBox.keyboardHint') }}
+    </p>
   </div>
 </template>
 
@@ -173,7 +214,8 @@ onMounted(() => {
   border: 1px solid #ccc;
   transition: box-shadow 0.5s,backdrop-filter 0.5s;
   padding: 2px 10px;
-  backdrop-filter:blur(2px)
+  backdrop-filter:blur(2px);
+  flex-wrap: nowrap;
 }
 
 .focused, .search-container:hover {
@@ -194,7 +236,9 @@ onMounted(() => {
 input {
   background-color: transparent;
   box-sizing: border-box;
-  width: 100%;
+  width: auto;
+  flex: 1;
+  min-width: 0;
   height: 40px;
   padding: 10px 5px;
   border: none;

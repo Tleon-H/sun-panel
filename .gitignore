@@ -42,3 +42,6 @@ service/database
 service/web
 service/uploads
 service/plugins
+
+# Fresh data for the isolated Leon Panel test compose file
+/leon-test-data/

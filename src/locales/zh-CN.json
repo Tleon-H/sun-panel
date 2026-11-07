@@ -44,6 +44,8 @@
       "appName": "关于",
       "author": "作者：",
       "checkUpdate": "检查新版本",
+      "independentNote": "Leon Panel 初始定制版，基于开源 Sun-Panel v1.3.0，不是官方 1.8.1。",
+      "upstreamProject": "上游项目：",
       "discussions": "交流社区：",
       "donate": "🧧打赏",
       "frontVersionText": "前端版本号",
@@ -131,7 +133,7 @@
     "action": "操作",
     "add": "添加",
     "addSuccess": "添加成功",
-    "appName": "Sun-Panel",
+    "appName": "Leon Panel",
     "backgroundColor": "背景颜色",
     "cancel": "取消",
     "confirm": "确定",
@@ -199,7 +201,9 @@
       "wed": "星期三"
     },
     "searchBox": {
+      "empty": "没有匹配的项目",
       "inputPlaceholder": "请输入搜索内容",
+      "keyboardHint": "上下键选择，回车打开。没有匹配时回车使用搜索引擎",
       "openWithNewOpen": "新窗口打开"
     },
     "systemMonitor": {
@@ -222,6 +226,7 @@
     "edit": "修改项目",
     "getGroupFail": "分组信息获取失败",
     "getIcon": "获取图标",
+    "iconLoadFailed": "图标加载失败，已改用文字",
     "geticonFail": "图标获取失败",
     "iconGroup": "分组",
     "inputIconName": "请输入图标名称",

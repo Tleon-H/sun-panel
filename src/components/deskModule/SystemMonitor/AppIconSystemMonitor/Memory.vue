@@ -5,6 +5,7 @@ import { correctionNumberByCardStyle } from './common'
 import { getMemonyState } from '@/api/system/systemMonitor'
 import type { PanelPanelConfigStyleEnum } from '@/enums'
 import { bytesToSize } from '@/utils/cmn'
+import { createPoller } from '@/utils/monitor/pollLifecycle'
 
 interface Prop {
   cardTypeStyle: PanelPanelConfigStyleEnum
@@ -15,33 +16,27 @@ interface Prop {
 }
 
 const props = defineProps<Prop>()
-let timer: NodeJS.Timer
 const memoryState = ref<SystemMonitor.MemoryInfo | null>(null)
+const poller = createPoller({
+  intervalMs: props.refreshInterval,
+  run: async (isCurrent) => {
+    const { data, code } = await getMemonyState<SystemMonitor.MemoryInfo>()
+    if (!isCurrent() || code !== 0)
+      return
+    memoryState.value = data
+  },
+})
 
 function formatMemorySize(v: number): string {
   return bytesToSize(v)
 }
 
-async function getData() {
-  try {
-    const { data, code } = await getMemonyState<SystemMonitor.MemoryInfo>()
-    if (code === 0)
-      memoryState.value = data
-  }
-  catch (error) {
-
-  }
-}
-
 onMounted(() => {
-  getData()
-  timer = setInterval(() => {
-    getData()
-  }, (!props.refreshInterval || props.refreshInterval <= 2000) ? 2000 : props.refreshInterval)
+  poller.start()
 })
 
 onUnmounted(() => {
-  clearInterval(timer)
+  poller.stop()
 })
 </script>
 

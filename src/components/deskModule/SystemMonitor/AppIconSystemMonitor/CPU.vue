@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import GenericProgress from '../components/GenericProgress/index.vue'
 import { correctionNumber, correctionNumberByCardStyle } from './common'
 import { getCpuState } from '@/api/system/systemMonitor'
 import type { PanelPanelConfigStyleEnum } from '@/enums'
+import { createPoller, firstNumber } from '@/utils/monitor/pollLifecycle'
 
 interface Prop {
   cardTypeStyle: PanelPanelConfigStyleEnum
@@ -14,29 +15,24 @@ interface Prop {
 }
 
 const props = defineProps<Prop>()
-let timer: NodeJS.Timer
 const cpuState = ref<SystemMonitor.CPUInfo | null>(null)
-
-async function getData() {
-  try {
+const usage = computed(() => firstNumber(cpuState.value?.usages))
+const poller = createPoller({
+  intervalMs: props.refreshInterval,
+  run: async (isCurrent) => {
     const { data, code } = await getCpuState<SystemMonitor.CPUInfo>()
-    if (code === 0)
-      cpuState.value = data
-  }
-  catch (error) {
-
-  }
-}
+    if (!isCurrent() || code !== 0)
+      return
+    cpuState.value = data
+  },
+})
 
 onMounted(() => {
-  getData()
-  timer = setInterval(() => {
-    getData()
-  }, (!props.refreshInterval || props.refreshInterval <= 2000) ? 2000 : props.refreshInterval)
+  poller.start()
 })
 
 onUnmounted(() => {
-  clearInterval(timer)
+  poller.stop()
 })
 </script>
 
@@ -45,9 +41,9 @@ onUnmounted(() => {
     :progress-color="progressColor"
     :progress-rail-color="progressRailColor"
     :progress-height="5"
-    :percentage="correctionNumberByCardStyle(cpuState?.usages[0] || 0, cardTypeStyle)"
+    :percentage="correctionNumberByCardStyle(usage, cardTypeStyle)"
     :card-type-style="cardTypeStyle"
-    :info-card-right-text="`${correctionNumber(cpuState?.usages[0] || 0)}%`"
+    :info-card-right-text="`${correctionNumber(usage)}%`"
     info-card-left-text="CPU"
     :text-color="textColor"
     style="width: 100%;"

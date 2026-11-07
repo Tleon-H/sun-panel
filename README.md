@@ -31,9 +31,9 @@ A server, NAS navigation panel, Homepage, Browser homepage.
 ![](./doc/images/main-dark.png)
 
 > [!IMPORTANT]
-> In order to maintain the livelihood, the author added some [`PRO`] (https://pro.sun-panel.top) function, so the project temporarily entered a closed source state.; At present, the latest version of the open source is `v1.3.0`, [Please see the latest version of closed source](https://github.com/hslr-s/sun-panel/releases).; When the modular technology is developed, the separation of the PRO and the programs will be opened again, and the closed source will have no effect on ordinary users.; Let's look forward to open source again, and at the same time, we are welcome to supervise and review the security of the program.
-> 
-> 作者为了维持生计，增加了一些 [`PRO`](https://pro.sun-panel.top) 功能，所以项目暂时进入闭源状态。目前开源最新版本为`v1.3.0`，[闭源最新版本请查看](https://github.com/hslr-s/sun-panel/releases)。待开发出模块化技术，然后对PRO和主程序进行分离会再次开源，闭源对普通用户没有任何影响。我们一起期待再次开源吧，同时也欢迎各位大佬对程序的安全性进行监督和审查。
+> This repository’s independent build is **Leon Panel**, an initial customization of the public MIT source of [Sun-Panel](https://github.com/hslr-s/sun-panel) **v1.3.0**. It is not an official later release, including v1.8.1. The upstream copyright and MIT license stay in place. See [doc/LEON-PANEL.md](./doc/LEON-PANEL.md).
+>
+> 本仓库的独立版本名为 **Leon Panel**，基于 [Sun-Panel](https://github.com/hslr-s/sun-panel) 公开的 **v1.3.0** 源码做初始定制，不是官方后续版本（包括 v1.8.1）。上游版权和 MIT 许可证保持不变。说明见 [doc/LEON-PANEL.md](./doc/LEON-PANEL.md)。
 
 ## 😎 Features
 

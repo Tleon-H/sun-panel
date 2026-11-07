@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { VueDraggable } from 'vue-draggable-plus'
 import { NBackTop, NButton, NButtonGroup, NDropdown, NModal, NSkeleton, NSpin, useDialog, useMessage } from 'naive-ui'
-import { nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { AppIcon, AppStarter, EditItem } from './components'
 import { Clock, SearchBox, SystemMonitor } from '@/components/deskModule'
 import { SvgIcon } from '@/components/common'
 import { deletes, getListByGroupId, saveSort } from '@/api/panel/itemIcon'
 import { getList as getGroupList } from '@/api/panel/itemIconGroup'
+import { filterIconGroups, moveMatchIndex } from '@/utils/search/filterIcons'
 
 import { setTitle, updateLocalUserInfo } from '@/utils/cmn'
 import { useAuthStore, usePanelState } from '@/store'
@@ -47,6 +48,10 @@ const settingModalShow = ref(false)
 
 const items = ref<ItemGroup[]>([])
 const filterItems = ref<ItemGroup[]>([])
+const searchKeyword = ref('')
+const searchMatches = ref<Panel.ItemInfo[]>([])
+const searchActive = ref(false)
+const activeMatchIndex = ref(-1)
 
 function openPage(openMethod: number, url: string, title?: string) {
   switch (openMethod) {
@@ -98,7 +103,7 @@ function getList() {
       if (element.id)
         updateItemIconGroupByNet(i, element.id)
     }
-    filterItems.value = items.value
+    applySearchFilter()
     // console.log(items)
   })
 }
@@ -268,27 +273,33 @@ onMounted(() => {
     setTitle(panelState.panelConfig.logoText)
 })
 
+const activeSearchItem = computed(() => searchMatches.value[activeMatchIndex.value])
+
+function applySearchFilter() {
+  const result = filterIconGroups(items.value, searchKeyword.value, !!panelState.panelConfig.searchBoxSearchIcon)
+  searchActive.value = result.active
+  searchMatches.value = result.matches as Panel.ItemInfo[]
+  filterItems.value = result.active ? result.groups as ItemGroup[] : items.value
+  activeMatchIndex.value = searchMatches.value.length > 0 ? Math.min(Math.max(activeMatchIndex.value, 0), searchMatches.value.length - 1) : -1
+}
+
 // 前端搜索过滤
 function itemFrontEndSearch(keyword?: string) {
-  keyword = keyword?.trim()
-  if (keyword !== '' && panelState.panelConfig.searchBoxSearchIcon) {
-    const filteredData = ref<ItemGroup[]>([])
-    for (let i = 0; i < items.value.length; i++) {
-      const element = items.value[i].items?.filter((item: Panel.ItemInfo) => {
-        return (
-          item.title.toLowerCase().includes(keyword?.toLowerCase() ?? '')
-          || item.url.toLowerCase().includes(keyword?.toLowerCase() ?? '')
-          || item.description?.toLowerCase().includes(keyword?.toLowerCase() ?? '')
-        )
-      })
-      if (element && element.length > 0)
-        filteredData.value.push({ items: element, hoverStatus: false })
-    }
-    filterItems.value = filteredData.value
-  }
-  else {
-    filterItems.value = items.value
-  }
+  searchKeyword.value = keyword ?? ''
+  activeMatchIndex.value = 0
+  applySearchFilter()
+}
+
+function handleMoveMatch(delta: number) {
+  activeMatchIndex.value = moveMatchIndex(activeMatchIndex.value, delta, searchMatches.value.length)
+}
+
+function openActiveMatch() {
+  const item = activeSearchItem.value
+  if (!item)
+    return
+  const groupIndex = items.value.findIndex(group => group.items?.includes(item))
+  handleItemClick(groupIndex < 0 ? 0 : groupIndex, item)
 }
 
 function handleSetHoverStatus(groupIndex: number, hoverStatus: boolean) {
@@ -343,7 +354,7 @@ function handleAddItem(itemIconGroupId?: number) {
         }"
       >
         <!-- 头 -->
-        <div class="mx-[auto] w-[80%]">
+        <div class="mx-[auto] w-[80%] leon-home-header">
           <div class="flex mx-[auto] items-center justify-center text-white">
             <div class="logo">
               <span class="text-2xl md:text-6xl font-bold text-shadow">
@@ -357,8 +368,17 @@ function handleAddItem(itemIconGroupId?: number) {
               <Clock :hide-second="!panelState.panelConfig.clockShowSecond" />
             </div>
           </div>
-          <div v-if="panelState.panelConfig.searchBoxShow" class="flex mt-[20px] mx-auto sm:w-full lg:w-[80%]">
-            <SearchBox @itemSearch="itemFrontEndSearch" />
+          <div v-if="panelState.panelConfig.searchBoxShow" class="flex flex-col mt-[20px] mx-auto sm:w-full lg:w-[80%]">
+            <SearchBox
+              :local-search-enabled="!!panelState.panelConfig.searchBoxSearchIcon"
+              :match-count="searchMatches.length"
+              @item-search="itemFrontEndSearch"
+              @move-match="handleMoveMatch"
+              @open-local="openActiveMatch"
+            />
+            <p v-if="searchActive && searchMatches.length === 0" class="leon-search-empty" role="status">
+              {{ $t('deskModule.searchBox.empty') }}
+            </p>
           </div>
         </div>
 
@@ -380,7 +400,7 @@ function handleAddItem(itemIconGroupId?: number) {
           <!-- 组纵向排列 -->
           <div
             v-for="(itemGroup, itemGroupIndex) in filterItems" :key="itemGroupIndex"
-            class="item-list mt-[50px]"
+            class="item-list leon-section"
             :class="itemGroup.sortStatus ? 'shadow-2xl border shadow-[0_0_30px_10px_rgba(0,0,0,0.3)]  p-[10px] rounded-2xl' : ''"
             @mouseenter="handleSetHoverStatus(itemGroupIndex, true)"
             @mouseleave="handleSetHoverStatus(itemGroupIndex, false)"
@@ -392,8 +412,8 @@ function handleAddItem(itemIconGroupId?: number) {
               </span>
               <div
                 v-if="authStore.visitMode === VisitMode.VISIT_MODE_LOGIN"
-                class="group-buttons ml-2 delay-100 transition-opacity flex"
-                :class="itemGroup.hoverStatus ? 'opacity-100' : 'opacity-0'"
+                class="group-buttons leon-hover-actions ml-2 flex"
+                :class="itemGroup.hoverStatus ? 'is-open' : ''"
               >
                 <span class="mr-2 cursor-pointer" :title="t('common.add')" @click="handleAddItem(itemGroup.id)">
                   <SvgIcon class="text-white font-xl" icon="typcn:plus" />
@@ -413,7 +433,7 @@ function handleAddItem(itemIconGroupId?: number) {
                   filter=".not-drag"
                   :disabled="!itemGroup.sortStatus"
                 >
-                  <div v-for="item, index in itemGroup.items" :key="index" :title="item.description" @contextmenu="(e) => handleContextMenu(e, itemGroupIndex, item)">
+                  <div v-for="item, index in itemGroup.items" :key="index" :title="item.description" :class="item === activeSearchItem ? 'leon-search-hit' : ''" @contextmenu="(e) => handleContextMenu(e, itemGroupIndex, item)">
                     <AppIcon
                       :class="itemGroup.sortStatus ? 'cursor-move' : 'cursor-pointer'"
                       :item-info="item"
@@ -450,7 +470,7 @@ function handleAddItem(itemIconGroupId?: number) {
                   filter=".not-drag"
                   :disabled="!itemGroup.sortStatus"
                 >
-                  <div v-for="item, index in itemGroup.items" :key="index" :title="item.description" @contextmenu="(e) => handleContextMenu(e, itemGroupIndex, item)">
+                  <div v-for="item, index in itemGroup.items" :key="index" :title="item.description" :class="item === activeSearchItem ? 'leon-search-hit' : ''" @contextmenu="(e) => handleContextMenu(e, itemGroupIndex, item)">
                     <AppIcon
                       :class="itemGroup.sortStatus ? 'cursor-move' : 'cursor-pointer'"
                       :item-info="item"
