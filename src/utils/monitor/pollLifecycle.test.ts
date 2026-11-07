@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { createPoller, firstNumber } from './pollLifecycle.ts'
+import { attachMonitorPoll, createPoller, firstNumber } from './pollLifecycle.ts'
 
 function deferred() {
   let resolve: () => void = () => {}
@@ -66,6 +66,39 @@ test('a new sample does not start while the previous sample is still running', a
   await pending.promise
   await Promise.resolve()
   poller.stop()
+})
+
+test('the monitor card hook starts on mount and drops a sample that finishes after unmount', async () => {
+  const pending = deferred()
+  let mounted = () => {}
+  let unmounted = () => {}
+  let applied = 0
+  attachMonitorPoll({
+    intervalMs: 5000,
+    run: async (isCurrent) => {
+      await pending.promise
+      if (isCurrent())
+        applied += 1
+    },
+    onMounted: (hook) => {
+      mounted = hook
+    },
+    onUnmounted: (hook) => {
+      unmounted = hook
+    },
+    create: options => createPoller({
+      ...options,
+      setIntervalFn: () => 1,
+      clearIntervalFn: () => {},
+    }),
+  })
+
+  mounted()
+  unmounted()
+  pending.resolve()
+  await pending.promise
+  await Promise.resolve()
+  assert.equal(applied, 0)
 })
 
 test('cpu usage falls back to zero when the sample list is missing', () => {

@@ -5,7 +5,7 @@ import { correctionNumberByCardStyle } from './common'
 import type { PanelPanelConfigStyleEnum } from '@/enums'
 import { bytesToSize } from '@/utils/cmn'
 import { getDiskStateByPath } from '@/api/system/systemMonitor'
-import { createPoller } from '@/utils/monitor/pollLifecycle'
+import { attachMonitorPoll } from '@/utils/monitor/pollLifecycle'
 
 interface Prop {
   cardTypeStyle: PanelPanelConfigStyleEnum
@@ -18,7 +18,7 @@ interface Prop {
 
 const props = defineProps<Prop>()
 const diskState = ref<SystemMonitor.DiskInfo | null>(null)
-const poller = createPoller({
+attachMonitorPoll({
   intervalMs: props.refreshInterval,
   run: async (isCurrent) => {
     const { data, code } = await getDiskStateByPath<SystemMonitor.DiskInfo>(props.path)
@@ -26,6 +26,8 @@ const poller = createPoller({
       return
     diskState.value = data
   },
+  onMounted,
+  onUnmounted,
 })
 
 function formatdiskSize(v: number): string {
@@ -35,14 +37,6 @@ function formatdiskSize(v: number): string {
 function formatdiskToByte(v: number): number {
   return v
 }
-
-onMounted(() => {
-  poller.start()
-})
-
-onUnmounted(() => {
-  poller.stop()
-})
 </script>
 
 <template>

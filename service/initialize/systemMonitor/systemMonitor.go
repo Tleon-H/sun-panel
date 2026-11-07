@@ -1,33 +1,57 @@
 package systemMonitor
 
 import (
+	"sync"
+	"time"
+
 	"sun-panel/global"
 	"sun-panel/lib/cache"
 	"sun-panel/lib/monitor"
 	"sun-panel/lib/pollguard"
-	"sync"
-	"time"
 )
+
+type collector func() global.ModelSystemMonitor
+type publisher func(global.ModelSystemMonitor)
+
+type clock interface {
+	C() <-chan time.Time
+	Stop()
+}
+
+type tickerClock struct {
+	ticker *time.Ticker
+}
+
+func (c tickerClock) C() <-chan time.Time { return c.ticker.C }
+func (c tickerClock) Stop()               { c.ticker.Stop() }
 
 // Start polls machine stats until the returned function is called.
 // InitApp does not call Start; the homepage uses the per-card frontend poller.
-// The previous loop had no stop and launched another collection on every tick.
+// stop waits until the ticker goroutine has exited and the ticker is stopped.
+// A sample already in progress is not written after stop.
 func Start(cacher cache.Cacher[global.ModelSystemMonitor], interval time.Duration) (stop func()) {
+	return startLoop(tickerClock{ticker: time.NewTicker(interval)}, GetInfo, func(info global.ModelSystemMonitor) {
+		cacher.SetDefault("value", info)
+	})
+}
+
+func startLoop(clk clock, collect collector, publish publisher) (stop func()) {
 	gate := pollguard.New()
 	gate.Start()
 	done := make(chan struct{})
+	finished := make(chan struct{})
 	var once sync.Once
 
 	go func() {
-		ticker := time.NewTicker(interval)
-		defer ticker.Stop()
+		defer close(finished)
+		defer clk.Stop()
 		defer gate.Stop()
 
 		for {
 			select {
 			case <-done:
 				return
-			case <-ticker.C:
+			case <-clk.C():
 				ok, current := gate.TryBegin()
 				if !ok {
 					continue
@@ -37,9 +61,9 @@ func Start(cacher cache.Cacher[global.ModelSystemMonitor], interval time.Duratio
 					if !current() {
 						return
 					}
-					monitorInfo := GetInfo()
+					info := collect()
 					if current() {
-						cacher.SetDefault("value", monitorInfo)
+						publish(info)
 					}
 				}()
 			}
@@ -49,6 +73,7 @@ func Start(cacher cache.Cacher[global.ModelSystemMonitor], interval time.Duratio
 	return func() {
 		once.Do(func() {
 			close(done)
+			<-finished
 		})
 	}
 }

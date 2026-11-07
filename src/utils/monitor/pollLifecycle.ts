@@ -70,6 +70,27 @@ export function createPoller(options: {
   }
 }
 
+// The Vue cards pass their real onMounted and onUnmounted hooks here.
+export function attachMonitorPoll(options: {
+  intervalMs: number
+  run: PollRun
+  onMounted: (hook: () => void) => void
+  onUnmounted: (hook: () => void) => void
+  create?: typeof createPoller
+}): Poller {
+  const poller = (options.create ?? createPoller)({
+    intervalMs: options.intervalMs,
+    run: options.run,
+  })
+  options.onMounted(() => {
+    poller.start()
+  })
+  options.onUnmounted(() => {
+    poller.stop()
+  })
+  return poller
+}
+
 export function firstNumber(values?: Array<number | null> | null): number {
   const value = values?.[0]
   return typeof value === 'number' && Number.isFinite(value) ? value : 0

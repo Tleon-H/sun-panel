@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { decideSearchConfirm, filterIconGroups, moveMatchIndex } from './filterIcons.ts'
+import { decideSearchConfirm, decideSearchKey, filterIconGroups, moveMatchIndex } from './filterIcons.ts'
 
 const groups = [
   {
@@ -46,4 +46,18 @@ test('arrow keys wrap the current match and enter opens a local match when one e
   assert.equal(decideSearchConfirm({ keyword: '文档', localSearchEnabled: true, matchCount: 1 }), 'open-local')
   assert.equal(decideSearchConfirm({ keyword: '没有', localSearchEnabled: true, matchCount: 0 }), 'open-engine')
   assert.equal(decideSearchConfirm({ keyword: '文档', localSearchEnabled: false, matchCount: 2 }), 'open-engine')
+})
+
+test('typing, external search, and IME composition are not captured by the search keys', () => {
+  const base = { localSearchEnabled: true, matchCount: 2 }
+  assert.deepEqual(decideSearchKey({ ...base, key: 'a' }), { type: 'ignore' })
+  assert.deepEqual(decideSearchKey({ ...base, key: 'Enter', isComposing: true }), { type: 'ignore' })
+  assert.deepEqual(decideSearchKey({ ...base, key: 'Enter', keyCode: 229 }), { type: 'ignore' })
+  assert.deepEqual(decideSearchKey({ ...base, key: 'Process' }), { type: 'ignore' })
+  assert.deepEqual(decideSearchKey({ ...base, key: 'ArrowDown', localSearchEnabled: false, matchCount: 2 }), { type: 'ignore' })
+  assert.deepEqual(decideSearchKey({ ...base, key: 'ArrowUp', matchCount: 0 }), { type: 'ignore' })
+  assert.deepEqual(decideSearchKey({ ...base, key: 'ArrowDown' }), { type: 'move', delta: 1 })
+  assert.deepEqual(decideSearchKey({ ...base, key: 'Enter' }), { type: 'confirm' })
+  assert.deepEqual(decideSearchKey({ ...base, key: 'Escape' }), { type: 'clear' })
+  assert.equal(decideSearchConfirm({ keyword: '文档', localSearchEnabled: true, matchCount: 0 }), 'open-engine')
 })

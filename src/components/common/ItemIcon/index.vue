@@ -3,7 +3,7 @@ import { Icon, loadIcon } from '@iconify/vue'
 import { NAvatar } from 'naive-ui'
 import { computed, ref, watch, withDefaults } from 'vue'
 import { t } from '@/locales'
-import { fallbackLabel, isRemoteIconType, reduceRemoteIconPhase, rejectAfter, type RemoteIconPhase } from '@/utils/icon/remoteIcon'
+import { createRemoteIconController, fallbackLabel, isRemoteIconType, rejectAfter, type RemoteIconPhase } from '@/utils/icon/remoteIcon'
 
 interface Prop {
   itemIcon?: Panel.ItemIcon | null
@@ -15,7 +15,12 @@ interface Prop {
 const props = withDefaults(defineProps<Prop>(), { size: 70 })
 const defaultBackground = '#2a2a2a6b'
 const phase = ref<RemoteIconPhase>('loading')
-let requestSerial = 0
+const requestSerial = ref(0)
+const iconController = createRemoteIconController(() => ({
+  itemType: props.itemIcon?.itemType,
+  src: props.itemIcon?.src,
+  text: props.itemIcon?.text,
+}))
 const defaultStyle = computed(() => ({
   width: `${props.size}px`,
   height: `${props.size}px`,
@@ -35,22 +40,15 @@ const remoteKey = computed(() => {
 const showImage = computed(() => props.itemIcon?.itemType === 2 && phase.value !== 'fallback' && !!props.itemIcon.src)
 const showOnlineIcon = computed(() => props.itemIcon?.itemType === 3 && phase.value === 'ready' && !!props.itemIcon.text)
 
-watch(remoteKey, (key) => {
-  const serial = ++requestSerial
-  phase.value = 'loading'
-  if (!key || props.itemIcon?.itemType !== 3)
+watch(remoteKey, () => {
+  const next = iconController.sync()
+  phase.value = next.phase
+  requestSerial.value = next.requestId
+  if (!next.shouldLoadIcon)
     return
-  const name = props.itemIcon.text?.trim()
-  if (!name) {
-    phase.value = reduceRemoteIconPhase(phase.value, 'error')
-    return
-  }
-  void loadOnlineIcon(name, serial)
-}, { immediate: true })
-
-watch(() => props.itemIcon?.src, (src) => {
-  if (props.itemIcon?.itemType === 2 && !src)
-    phase.value = reduceRemoteIconPhase('loading', 'error')
+  const name = props.itemIcon?.text?.trim()
+  if (name)
+    void loadOnlineIcon(name, next.requestId)
 }, { immediate: true })
 
 async function loadOnlineIcon(name: string, serial: number) {
@@ -59,23 +57,25 @@ async function loadOnlineIcon(name: string, serial: number) {
       loadIcon(name),
       rejectAfter(8000),
     ])
-    if (serial !== requestSerial)
-      return
-    phase.value = reduceRemoteIconPhase(phase.value, 'success')
+    phase.value = iconController.onIconLoad('success', serial)
   }
   catch {
-    if (serial !== requestSerial)
-      return
-    phase.value = reduceRemoteIconPhase(phase.value, 'error')
+    phase.value = iconController.onIconLoad('error', serial)
   }
 }
 
-function onImgLoad() {
-  phase.value = reduceRemoteIconPhase(phase.value, 'success')
+function eventRequestId(event: Event): number {
+  const raw = (event.currentTarget as HTMLElement | null)?.dataset.request
+  const id = Number(raw)
+  return Number.isFinite(id) ? id : -1
 }
 
-function onImgError() {
-  phase.value = reduceRemoteIconPhase(phase.value, 'error')
+function onImgLoad(event: Event) {
+  phase.value = iconController.onImageEvent('success', eventRequestId(event))
+}
+
+function onImgError(event: Event) {
+  phase.value = iconController.onImageEvent('error', eventRequestId(event))
 }
 </script>
 
@@ -92,6 +92,8 @@ function onImgError() {
         <template v-else-if="showImage">
           <div :style="{ backgroundColor, ...defaultStyle }" class="flex justify-center items-center overflow-hidden">
             <img
+              :key="requestSerial"
+              :data-request="requestSerial"
               :src="itemIcon.src"
               :alt="fallbackText || letter"
               :class="iconExt === 'svg' ? 'w-[35px] h-[35px]' : 'w-full h-full object-cover'"

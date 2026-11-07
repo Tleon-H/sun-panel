@@ -60,3 +60,32 @@ export function decideSearchConfirm(input: {
     return 'open-local'
   return 'open-engine'
 }
+
+export type SearchKeyDecision =
+  | { type: 'ignore' }
+  | { type: 'move'; delta: number }
+  | { type: 'confirm' }
+  | { type: 'clear' }
+
+// Arrow keys move the caret unless a local match can actually be selected.
+// Composition keys, including Enter used to commit an IME phrase, are left to the input.
+export function decideSearchKey(input: {
+  key: string
+  isComposing?: boolean
+  keyCode?: number
+  localSearchEnabled: boolean
+  matchCount: number
+}): SearchKeyDecision {
+  if (input.isComposing || input.keyCode === 229 || input.key === 'Process' || input.key === 'Unidentified')
+    return { type: 'ignore' }
+  if (input.key === 'ArrowDown' || input.key === 'ArrowUp') {
+    if (!input.localSearchEnabled || input.matchCount <= 0)
+      return { type: 'ignore' }
+    return { type: 'move', delta: input.key === 'ArrowDown' ? 1 : -1 }
+  }
+  if (input.key === 'Enter')
+    return { type: 'confirm' }
+  if (input.key === 'Escape')
+    return { type: 'clear' }
+  return { type: 'ignore' }
+}

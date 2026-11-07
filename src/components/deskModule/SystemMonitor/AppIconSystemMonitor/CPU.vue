@@ -4,7 +4,7 @@ import GenericProgress from '../components/GenericProgress/index.vue'
 import { correctionNumber, correctionNumberByCardStyle } from './common'
 import { getCpuState } from '@/api/system/systemMonitor'
 import type { PanelPanelConfigStyleEnum } from '@/enums'
-import { createPoller, firstNumber } from '@/utils/monitor/pollLifecycle'
+import { attachMonitorPoll, firstNumber } from '@/utils/monitor/pollLifecycle'
 
 interface Prop {
   cardTypeStyle: PanelPanelConfigStyleEnum
@@ -17,7 +17,7 @@ interface Prop {
 const props = defineProps<Prop>()
 const cpuState = ref<SystemMonitor.CPUInfo | null>(null)
 const usage = computed(() => firstNumber(cpuState.value?.usages))
-const poller = createPoller({
+attachMonitorPoll({
   intervalMs: props.refreshInterval,
   run: async (isCurrent) => {
     const { data, code } = await getCpuState<SystemMonitor.CPUInfo>()
@@ -25,14 +25,8 @@ const poller = createPoller({
       return
     cpuState.value = data
   },
-})
-
-onMounted(() => {
-  poller.start()
-})
-
-onUnmounted(() => {
-  poller.stop()
+  onMounted,
+  onUnmounted,
 })
 </script>
 
