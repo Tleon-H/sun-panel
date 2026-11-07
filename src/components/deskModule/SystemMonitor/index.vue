@@ -173,7 +173,7 @@ function handleRightMenuSelect(key: string | number) {
 <template>
   <div class="system-monitor w-full">
     <div
-      class="mt-[50px]"
+      class="leon-section"
       :class="monitorGroup.sortStatus ? 'shadow-2xl border shadow-[0_0_30px_10px_rgba(0,0,0,0.3)]  p-[10px] rounded-2xl' : ''"
       @mouseenter="handleSetHoverStatus(true)"
       @mouseleave="handleSetHoverStatus(false)"
@@ -185,8 +185,8 @@ function handleRightMenuSelect(key: string | number) {
         </span>
         <div
           v-if="allowEdit"
-          class="system-monitor-buttons ml-2 delay-100 transition-opacity flex"
-          :class="monitorGroup.hoverStatus ? 'opacity-100' : 'opacity-0'"
+          class="system-monitor-buttons leon-hover-actions ml-2 flex"
+          :class="monitorGroup.hoverStatus ? 'is-open' : ''"
         >
           <span class="mr-2 cursor-pointer" @click="handleAddItem()">
             <SvgIcon class="text-white font-xl" icon="typcn:plus" />

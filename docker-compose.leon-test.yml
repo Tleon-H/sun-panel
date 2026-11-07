@@ -1,0 +1,16 @@
+# Isolated trial stack for Leon Panel.
+# Uses a new data directory and port 13002 on the host.
+# Do not point these volumes at an existing Sun-Panel database,
+# conf directory, uploads directory, or helper custom files.
+
+services:
+  leon-panel-test:
+    build: .
+    container_name: leon-panel-test
+    ports:
+      - "13002:3002"
+    volumes:
+      - ./leon-test-data/conf:/app/conf
+      - ./leon-test-data/uploads:/app/uploads
+      - ./leon-test-data/database:/app/database
+    restart: "no"

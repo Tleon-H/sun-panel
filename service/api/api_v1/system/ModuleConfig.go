@@ -20,16 +20,22 @@ func (a *ModuleConfigApi) GetByName(c *gin.Context) {
 		return
 	}
 
-	userInfo, _ := base.GetCurrentUserInfo(c)
-
-	mCfg := models.ModuleConfig{}
-	if cfg, err := mCfg.GetConfigByUserIdAndName(global.Db, userInfo.ID, req.Name); err != nil {
-		apiReturn.ErrorDatabase(c, err.Error())
-		return
-	} else {
-		apiReturn.SuccessData(c, cfg)
+	userInfo, ok := base.GetCurrentUserInfo(c)
+	if !ok || userInfo.ID == 0 {
+		apiReturn.ErrorByCode(c, 1000)
 		return
 	}
+
+	mCfg := models.ModuleConfig{}
+	cfg, err := mCfg.GetConfigByUserIdAndName(global.Db, userInfo.ID, req.Name)
+	if err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
+	}
+	if base.GetCurrentVisitMode(c) == base.VISIT_MODE_PUBLIC && req.Name == searchModuleConfigName {
+		cfg = PublicSearchConfig(cfg)
+	}
+	apiReturn.SuccessData(c, cfg)
 
 }
 
@@ -39,7 +45,11 @@ func (a *ModuleConfigApi) Save(c *gin.Context) {
 		apiReturn.ErrorParamFomat(c, err.Error())
 		return
 	}
-	userInfo, _ := base.GetCurrentUserInfo(c)
+	userInfo, ok := base.GetCurrentUserInfo(c)
+	if !ok || userInfo.ID == 0 {
+		apiReturn.ErrorByCode(c, 1000)
+		return
+	}
 	mCfg := models.ModuleConfig{}
 	mCfg.UserId = userInfo.ID
 	mCfg.Value = req.Value

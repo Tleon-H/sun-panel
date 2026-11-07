@@ -5,6 +5,7 @@ import { correctionNumberByCardStyle } from './common'
 import type { PanelPanelConfigStyleEnum } from '@/enums'
 import { bytesToSize } from '@/utils/cmn'
 import { getDiskStateByPath } from '@/api/system/systemMonitor'
+import { attachMonitorPoll } from '@/utils/monitor/pollLifecycle'
 
 interface Prop {
   cardTypeStyle: PanelPanelConfigStyleEnum
@@ -16,8 +17,18 @@ interface Prop {
 }
 
 const props = defineProps<Prop>()
-let timer: NodeJS.Timer
 const diskState = ref<SystemMonitor.DiskInfo | null>(null)
+attachMonitorPoll({
+  intervalMs: props.refreshInterval,
+  run: async (isCurrent) => {
+    const { data, code } = await getDiskStateByPath<SystemMonitor.DiskInfo>(props.path)
+    if (!isCurrent() || code !== 0)
+      return
+    diskState.value = data
+  },
+  onMounted,
+  onUnmounted,
+})
 
 function formatdiskSize(v: number): string {
   return bytesToSize(v)
@@ -26,28 +37,6 @@ function formatdiskSize(v: number): string {
 function formatdiskToByte(v: number): number {
   return v
 }
-
-async function getData() {
-  try {
-    const { data, code } = await getDiskStateByPath<SystemMonitor.DiskInfo>(props.path)
-    if (code === 0)
-      diskState.value = data
-  }
-  catch (error) {
-
-  }
-}
-
-onMounted(() => {
-  getData()
-  timer = setInterval(() => {
-    getData()
-  }, (!props.refreshInterval || props.refreshInterval <= 2000) ? 2000 : props.refreshInterval)
-})
-
-onUnmounted(() => {
-  clearInterval(timer)
-})
 </script>
 
 <template>
