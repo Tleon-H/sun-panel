@@ -194,6 +194,7 @@ function resetPanelConfig() {
         action="/api/file/uploadImg"
         :show-file-list="false"
         name="imgfile"
+        :data="{ category: 'wallpaper' }"
         :headers="{
           token: authStore.token as string,
         }"

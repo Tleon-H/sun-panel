@@ -21,7 +21,16 @@ import (
 type FileApi struct{}
 
 func (a *FileApi) UploadImg(c *gin.Context) {
-	userInfo, _ := base.GetCurrentUserInfo(c)
+	userInfo, ok := base.GetCurrentUserInfo(c)
+	if !ok || userInfo.ID == 0 {
+		apiReturn.ErrorByCode(c, 1000)
+		return
+	}
+	category, valid := uploadCategory(c.PostForm("category"))
+	if !valid {
+		apiReturn.ErrorByCode(c, 1400)
+		return
+	}
 	configUpload := global.Config.GetValueString("base", "source_path")
 	f, err := c.FormFile("imgfile")
 	if err != nil {
@@ -54,7 +63,7 @@ func (a *FileApi) UploadImg(c *gin.Context) {
 
 		// 像数据库添加记录
 		mFile := models.File{}
-		mFile.AddFile(userInfo.ID, f.Filename, fileExt, filepath)
+		mFile.AddFile(userInfo.ID, f.Filename, fileExt, filepath, category)
 		apiReturn.SuccessData(c, gin.H{
 			"imageUrl": filepath[1:],
 		})
@@ -62,7 +71,16 @@ func (a *FileApi) UploadImg(c *gin.Context) {
 }
 
 func (a *FileApi) UploadFiles(c *gin.Context) {
-	userInfo, _ := base.GetCurrentUserInfo(c)
+	userInfo, ok := base.GetCurrentUserInfo(c)
+	if !ok || userInfo.ID == 0 {
+		apiReturn.ErrorByCode(c, 1000)
+		return
+	}
+	category, valid := uploadCategory(c.PostForm("category"))
+	if !valid {
+		apiReturn.ErrorByCode(c, 1400)
+		return
+	}
 	configUpload := global.Config.GetValueString("base", "source_path")
 
 	form, err := c.MultipartForm()
@@ -88,7 +106,7 @@ func (a *FileApi) UploadFiles(c *gin.Context) {
 			// 成功
 			// 像数据库添加记录
 			mFile := models.File{}
-			mFile.AddFile(userInfo.ID, f.Filename, fileExt, filepath)
+			mFile.AddFile(userInfo.ID, f.Filename, fileExt, filepath, category)
 			succMap[f.Filename] = filepath[1:]
 		}
 	}
@@ -100,31 +118,92 @@ func (a *FileApi) UploadFiles(c *gin.Context) {
 }
 
 func (a *FileApi) GetList(c *gin.Context) {
-	list := []models.File{}
-	userInfo, _ := base.GetCurrentUserInfo(c)
+	userInfo, ok := base.GetCurrentUserInfo(c)
+	if !ok || userInfo.ID == 0 {
+		apiReturn.ErrorByCode(c, 1000)
+		return
+	}
+	req := models.FileListQuery{}
+	if c.Request.ContentLength != 0 {
+		if err := c.ShouldBindBodyWith(&req, binding.JSON); err != nil {
+			apiReturn.ErrorParamFomat(c, err.Error())
+			return
+		}
+	}
+	query, err := models.NormalizeFileListQuery(req.Page, req.Limit, req.Category, req.Keyword)
+	if err != nil {
+		apiReturn.ErrorByCode(c, 1400)
+		return
+	}
+
 	var count int64
-	if err := global.Db.Order("created_at desc").Find(&list, "user_id=?", userInfo.ID).Count(&count).Error; err != nil {
+	if err := models.FileListScope(global.Db, userInfo.ID, query).Count(&count).Error; err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
+	}
+	list := []models.File{}
+	offset := (query.Page - 1) * query.Limit
+	if err := models.FileListScope(global.Db, userInfo.ID, query).Order("created_at desc").Offset(offset).Limit(query.Limit).Find(&list).Error; err != nil {
 		apiReturn.ErrorDatabase(c, err.Error())
 		return
 	}
 
 	data := []map[string]interface{}{}
 	for _, v := range list {
+		src := v.Src
+		if len(src) > 0 {
+			src = src[1:]
+		}
 		data = append(data, map[string]interface{}{
-			"src":        v.Src[1:],
+			"src":        src,
 			"fileName":   v.FileName,
 			"id":         v.ID,
 			"createTime": v.CreatedAt,
 			"updateTime": v.UpdatedAt,
 			"path":       v.Src,
+			"category":   models.DisplayFileCategory(v.Category),
 		})
 	}
 	apiReturn.SuccessListData(c, data, count)
 }
 
+func (a *FileApi) UpdateCategory(c *gin.Context) {
+	userInfo, ok := base.GetCurrentUserInfo(c)
+	if !ok || userInfo.ID == 0 {
+		apiReturn.ErrorByCode(c, 1000)
+		return
+	}
+	req := struct {
+		ID       uint   `json:"id"`
+		Category string `json:"category"`
+	}{}
+	if err := c.ShouldBindBodyWith(&req, binding.JSON); err != nil {
+		apiReturn.ErrorParamFomat(c, err.Error())
+		return
+	}
+	updated, err := (&models.File{}).UpdateOwnCategory(global.Db, userInfo.ID, req.ID, req.Category)
+	if err != nil {
+		if err == models.ErrFileCategory {
+			apiReturn.ErrorByCode(c, 1400)
+			return
+		}
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
+	}
+	if !updated {
+		apiReturn.ErrorDataNotFound(c)
+		return
+	}
+	apiReturn.Success(c)
+}
+
 func (a *FileApi) Deletes(c *gin.Context) {
 	req := commonApiStructs.RequestDeleteIds[uint]{}
-	userInfo, _ := base.GetCurrentUserInfo(c)
+	userInfo, ok := base.GetCurrentUserInfo(c)
+	if !ok || userInfo.ID == 0 {
+		apiReturn.ErrorByCode(c, 1000)
+		return
+	}
 	if err := c.ShouldBindBodyWith(&req, binding.JSON); err != nil {
 		apiReturn.ErrorParamFomat(c, err.Error())
 		return
@@ -150,4 +229,11 @@ func (a *FileApi) Deletes(c *gin.Context) {
 
 	apiReturn.Success(c)
 
+}
+
+func uploadCategory(raw string) (string, bool) {
+	if strings.TrimSpace(raw) == "" {
+		return models.FileCategoryUncategorized, true
+	}
+	return models.NormalizeFileCategory(raw)
 }

@@ -106,16 +106,25 @@
       "groupName": "Group name"
     },
     "uploadsFileManager": {
-      "alertText": "Here you can manage wallpapers and icons you have uploaded.",
+      "alertText": "Filter your own uploads by icon, wallpaper, or uncategorized. Changing a category only changes the label. It does not move the file or change its link.",
       "appName": "Upload File Management",
+      "category": {
+        "all": "All",
+        "icon": "Icon",
+        "uncategorized": "Uncategorized",
+        "wallpaper": "Wallpaper"
+      },
+      "categoryLabel": "Category",
       "copyFailed": "Copy failed",
       "copyLink": "Copy link",
       "copySuccess": "Link copied successfully. You can paste it in the address bar.",
       "deleteWarningText": "Cannot be recovered after deletion. Are you sure you want to continue?",
       "fileName": "Original file name",
       "infoTitle": "File details",
+      "noMatch": "No images match this filter",
       "nothingText": "You haven't uploaded any images yet.",
       "path": "File path",
+      "searchPlaceholder": "Search by file name",
       "setWallpaper": "Set as wallpaper",
       "uploadTime": "Upload time"
     },

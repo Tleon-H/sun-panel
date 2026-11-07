@@ -30,6 +30,17 @@ test('the icon component resets through the remote icon controller when its addr
   assert.match(icon, /data-request/)
 })
 
+test('image uploads and the file manager use the category metadata', () => {
+  const manager = source('src/components/apps/UploadFileManager/index.vue')
+  assert.match(manager, /fileListRequest\(/)
+  assert.match(manager, /updateCategory\(/)
+  assert.match(manager, /displayFileCategory\(/)
+  assert.doesNotMatch(manager, /v-html/)
+  assert.match(source('src/components/apps/Style/index.vue'), /category: 'wallpaper'/)
+  assert.match(source('src/views/home/components/EditItem/IconEditor.vue'), /category: 'icon'/)
+  assert.match(source('service/api/api_v1/panel/itemIcon.go'), /FileCategoryIcon/)
+})
+
 test('cpu, memory, and disk cards mount and unmount through the shared poll hook', () => {
   for (const path of [
     'src/components/deskModule/SystemMonitor/AppIconSystemMonitor/CPU.vue',

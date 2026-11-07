@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { NAlert, NButton, NButtonGroup, NCard, NEllipsis, NGrid, NGridItem, NImage, NImageGroup, NSpin, useDialog, useMessage } from 'naive-ui'
-import { onMounted, ref } from 'vue'
-import { deletes, getList } from '@/api/system/file'
+import { NAlert, NButton, NButtonGroup, NCard, NEllipsis, NGrid, NGridItem, NImage, NImageGroup, NInput, NPagination, NSelect, NSpin, useDialog, useMessage } from 'naive-ui'
+import { computed, onMounted, ref } from 'vue'
+import { deletes, getList, updateCategory } from '@/api/system/file'
 import { set as savePanelConfig } from '@/api/panel/userConfig'
 import { RoundCardModal, SvgIcon } from '@/components/common'
 import { copyToClipboard, timeFormat } from '@/utils/cmn'
+import { displayFileCategory, fileCategories, fileListRequest, type FileCategory } from '@/utils/file/category'
 import { t } from '@/locales'
 import { usePanelState } from '@/store'
 
@@ -18,17 +19,78 @@ const ms = useMessage()
 const dialog = useDialog()
 const panelStore = usePanelState()
 const loading = ref(false)
+const page = ref(1)
+const total = ref(0)
+const keyword = ref('')
+const category = ref<'' | FileCategory>('')
 const infoModalState = ref<InfoModalState>({
   show: false,
   title: '',
   fileInfo: null,
 })
+let keywordTimer: ReturnType<typeof setTimeout> | null = null
+const pageCount = computed(() => Math.max(1, Math.ceil(total.value / 12)))
+const categoryOptions = computed(() => fileCategories.map(value => ({
+  label: t(`apps.uploadsFileManager.category.${value}`),
+  value,
+})))
+const filterOptions = computed(() => [
+  { label: t('apps.uploadsFileManager.category.all'), value: '' as const },
+  ...categoryOptions.value,
+])
 
 async function getFileList() {
   loading.value = true
-  const { data } = await getList<Common.ListResponse<File.Info[]>>()
-  imageList.value = data.list
-  loading.value = false
+  try {
+    const query = fileListRequest({
+      page: page.value,
+      category: category.value,
+      keyword: keyword.value,
+    })
+    const { data } = await getList<Common.ListResponse<File.Info[]>>(query)
+    imageList.value = (data.list ?? []).map(item => ({
+      ...item,
+      category: displayFileCategory(item.category),
+    }))
+    total.value = data.count ?? 0
+  }
+  finally {
+    loading.value = false
+  }
+}
+
+function selectCategory(value: '' | FileCategory) {
+  category.value = value
+  page.value = 1
+  void getFileList()
+}
+
+function onKeywordInput() {
+  page.value = 1
+  if (keywordTimer)
+    clearTimeout(keywordTimer)
+  keywordTimer = setTimeout(() => {
+    void getFileList()
+  }, 250)
+}
+
+function changePage(next: number) {
+  page.value = next
+  void getFileList()
+}
+
+async function changeCategory(item: File.Info, value: string) {
+  const next = displayFileCategory(value)
+  if (!item.id || next === item.category)
+    return
+  const { code, msg } = await updateCategory(item.id, next)
+  if (code === 0) {
+    ms.success(t('common.success'))
+    await getFileList()
+  }
+  else {
+    ms.error(`${t('common.failed')}:${msg}`)
+  }
 }
 
 async function copyImageUrl(text: string) {
@@ -89,9 +151,28 @@ onMounted(() => {
     <NAlert type="info" :bordered="false">
       {{ $t('apps.uploadsFileManager.alertText') }}
     </NAlert>
+    <div class="file-filters">
+      <button
+        v-for="item in filterOptions"
+        :key="item.value || 'all'"
+        type="button"
+        class="file-filter"
+        :class="{ active: category === item.value }"
+        @click="selectCategory(item.value)"
+      >
+        {{ item.label }}
+      </button>
+    </div>
+    <NInput
+      v-model:value="keyword"
+      class="mt-2"
+      clearable
+      :placeholder="$t('apps.uploadsFileManager.searchPlaceholder')"
+      @update:value="onKeywordInput"
+    />
     <div class="flex justify-center mt-2">
       <div v-if="imageList.length === 0 && !loading" class="flex">
-        {{ $t('apps.uploadsFileManager.nothingText') }}
+        {{ keyword || category ? $t('apps.uploadsFileManager.noMatch') : $t('apps.uploadsFileManager.nothingText') }}
       </div>
       <NImageGroup v-else>
         <NGrid cols="2 300:2 600:4 900:6 1100:9" :x-gap="5" :y-gap="5">
@@ -108,6 +189,14 @@ onMounted(() => {
                     {{ item.fileName }}
                   </NEllipsis>
                 </span>
+                <div class="mt-1">
+                  <NSelect
+                    size="tiny"
+                    :value="displayFileCategory(item.category)"
+                    :options="categoryOptions"
+                    @update:value="(value: string) => changeCategory(item, value)"
+                  />
+                </div>
                 <div class="flex justify-center mt-[10px]">
                   <NButtonGroup>
                     <NButton size="tiny" tertiary style="cursor: pointer;" :title="$t('apps.uploadsFileManager.copyLink')" @click="copyImageUrl(item.src)">
@@ -138,6 +227,9 @@ onMounted(() => {
         </NGrid>
       </NImageGroup>
     </div>
+    <div v-if="total > 12" class="file-pages">
+      <NPagination :page="page" :page-count="pageCount" @update:page="changePage" />
+    </div>
 
     <RoundCardModal v-model:show="infoModalState.show" style="max-width: 300px;" size="small" :title="$t('apps.uploadsFileManager.infoTitle')">
       <div>
@@ -166,6 +258,14 @@ onMounted(() => {
               {{ timeFormat(infoModalState.fileInfo?.createTime) }}
             </div>
           </div>
+          <div class="mb-2">
+            <span class="text-slate-500">
+              {{ $t('apps.uploadsFileManager.categoryLabel') }}
+            </span>
+            <div class="text-xs">
+              {{ $t(`apps.uploadsFileManager.category.${displayFileCategory(infoModalState.fileInfo?.category)}`) }}
+            </div>
+          </div>
         </div>
       </div>
     </RoundCardModal>
@@ -185,5 +285,31 @@ onMounted(() => {
     linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%);
   background-size: 16px 16px;
   background-position: 0 0, 8px 8px;
+}
+
+.file-filters,
+.file-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.file-pages {
+  justify-content: center;
+}
+
+.file-filter {
+  border: 1px solid rgba(148, 163, 184, 0.8);
+  background: transparent;
+  border-radius: 999px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.file-filter.active {
+  background: #0f172a;
+  color: #f8fafc;
+  border-color: #e2e8f0;
 }
 </style>

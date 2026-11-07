@@ -144,6 +144,7 @@ const handleUploadFinish = ({
               action="/api/file/uploadImg"
               :show-file-list="false"
               name="imgfile"
+              :data="{ category: 'icon' }"
               :headers="{
                 token: authStore.token as string,
               }"
