@@ -7,6 +7,7 @@ func Init(routerGroup *gin.RouterGroup) {
 	InitLogin(routerGroup)
 	InitUserRouter(routerGroup)
 	InitFileRouter(routerGroup)
+	InitBackupRouter(routerGroup)
 	InitNoticeRouter(routerGroup)
 	InitModuleConfigRouter(routerGroup)
 	InitMonitorRouter(routerGroup)

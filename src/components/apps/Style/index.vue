@@ -56,7 +56,10 @@ function handleUploadBackgroundFinish({
   event?: ProgressEvent
 }) {
   const res = JSON.parse((event?.target as XMLHttpRequest).response)
-  panelState.panelConfig.backgroundImageSrc = res.data.imageUrl
+  if (res.code === 0 && res.data?.imageUrl)
+    panelState.panelConfig.backgroundImageSrc = res.data.imageUrl
+  else
+    ms.error(t('common.uploadFail'))
   return file
 }
 

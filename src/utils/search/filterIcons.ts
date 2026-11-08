@@ -20,6 +20,22 @@ export function iconMatchesKeyword(item: SearchableIcon, keyword: string): boole
   return [item.title, item.url, item.description].some(field => (field ?? '').toLowerCase().includes(keyword))
 }
 
+export function acceptLoadedIcons<T>(input: {
+  groups: Array<{ id?: number | null; items?: T[] | null }>
+  requestId: number
+  currentRequestId: number
+  groupId: number
+  icons: T[]
+}): boolean {
+  if (input.requestId !== input.currentRequestId)
+    return false
+  const group = input.groups.find(item => item.id === input.groupId)
+  if (!group)
+    return false
+  group.items = input.icons
+  return true
+}
+
 export function filterIconGroups<T extends SearchableIcon, G extends { items?: T[] | null }>(
   groups: G[],
   keyword: string | undefined | null,

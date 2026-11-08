@@ -45,3 +45,6 @@ service/plugins
 
 # Fresh data for the isolated Leon Panel test compose file
 /leon-test-data/
+
+# Administrator backup downloads are private and must not be committed
+leon-panel-backup*.zip

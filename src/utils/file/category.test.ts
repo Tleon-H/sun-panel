@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { displayFileCategory, fileListRequest } from './category.ts'
+import { displayFileCategory, fileListRequest, pageAfterListChange } from './category.ts'
 
 test('blank and unknown file categories stay uncategorized', () => {
   assert.equal(displayFileCategory(''), 'uncategorized')
@@ -30,4 +30,12 @@ test('list requests keep paging, filename search, and only known categories', ()
   })
   assert.equal(fileListRequest({ category: 'shared', keyword: '<img>' }).category, '')
   assert.equal(fileListRequest({ category: 'uncategorized' }).category, 'uncategorized')
+  assert.equal(fileListRequest({ keyword: '图'.repeat(90) }).keyword.length, 80)
+})
+
+test('deleting the last file on the last page moves back to a page that still has files', () => {
+  assert.equal(pageAfterListChange(2, 13, 12), 2)
+  assert.equal(pageAfterListChange(2, 12, 12), 1)
+  assert.equal(pageAfterListChange(3, 0, 12), 1)
+  assert.equal(pageAfterListChange(0, 5, 12), 1)
 })

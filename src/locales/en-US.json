@@ -52,6 +52,13 @@
       "issue": "Feedback:",
       "viewUpdateLog": "Click here to view update log"
     },
+    "backup": {
+      "appName": "Backup export",
+      "download": "Download backup",
+      "downloading": "Preparing the backup",
+      "started": "The backup download has started. Keep the file where only you can access it.",
+      "warning": "This download is for your own storage. The archive contains a SQLite database snapshot, uploaded images, configuration, and custom files. It can include password hashes, keys, and private navigation data. Do not send it to anyone or put it in a public directory. Restore is not implemented. Downloading does not overwrite data or stop the program. This is not an official 1.8.1 backup and is not promised to open in an official release. If the program uses MySQL, this button does not export the database; back up MySQL yourself."
+    },
     "baseSettings": {
       "appName": "Style Settings",
       "bottomMargin": "Bottom margin",

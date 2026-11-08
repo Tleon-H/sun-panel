@@ -75,10 +75,7 @@ func NormalizeFileListQuery(page, limit int, category, keyword string) (FileList
 	if query.Limit > fileListMaxLimit {
 		query.Limit = fileListMaxLimit
 	}
-	query.Keyword = strings.TrimSpace(keyword)
-	if len(query.Keyword) > fileKeywordMaxLength {
-		query.Keyword = query.Keyword[:fileKeywordMaxLength]
-	}
+	query.Keyword = trimFileKeyword(keyword)
 	if strings.TrimSpace(category) == "" {
 		return query, nil
 	}
@@ -90,8 +87,21 @@ func NormalizeFileListQuery(page, limit int, category, keyword string) (FileList
 	return query, nil
 }
 
+const fileNameLikeSQL = "file_name LIKE ? ESCAPE '!'"
+
+func trimFileKeyword(keyword string) string {
+	keyword = strings.TrimSpace(keyword)
+	characters := []rune(keyword)
+	if len(characters) > fileKeywordMaxLength {
+		return string(characters[:fileKeywordMaxLength])
+	}
+	return keyword
+}
+
 func fileKeywordLike(keyword string) string {
-	escaped := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(keyword)
+	// '!' is one character in both SQLite and MySQL/MariaDB. A backslash escape is one
+	// character in SQLite and an invalid or multi-character escape in MySQL.
+	escaped := strings.NewReplacer(`!`, `!!`, `%`, `!%`, `_`, `!_`).Replace(keyword)
 	return "%" + escaped + "%"
 }
 
@@ -105,7 +115,7 @@ func FileListScope(db *gorm.DB, userID uint, query FileListQuery) *gorm.DB {
 		scope = scope.Where("category = ?", query.Category)
 	}
 	if query.Keyword != "" {
-		scope = scope.Where("file_name LIKE ? ESCAPE '\\'", fileKeywordLike(query.Keyword))
+		scope = scope.Where(fileNameLikeSQL, fileKeywordLike(query.Keyword))
 	}
 	return scope
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { decideSearchConfirm, decideSearchKey, filterIconGroups, moveMatchIndex } from './filterIcons.ts'
+import { acceptLoadedIcons, decideSearchConfirm, decideSearchKey, filterIconGroups, moveMatchIndex } from './filterIcons.ts'
 
 const groups = [
   {
@@ -24,6 +24,29 @@ test('search matches title, address, and description without adding groups', () 
 
   const byDescription = filterIconGroups(groups, '说明', true)
   assert.deepEqual(byDescription.matches.map(item => item.title), ['示例文档'])
+})
+
+test('icons that arrive after the groups are loaded can be searched, and a stale load is ignored', () => {
+  const groups = [{ id: 1, title: '常用', items: [] as { title: string }[] }]
+  const applied = acceptLoadedIcons({
+    groups,
+    requestId: 2,
+    currentRequestId: 2,
+    groupId: 1,
+    icons: [{ title: '示例文档' }],
+  })
+  assert.equal(applied, true)
+  assert.deepEqual(filterIconGroups(groups, '文档', true).matches.map(item => item.title), ['示例文档'])
+
+  const stale = acceptLoadedIcons({
+    groups,
+    requestId: 2,
+    currentRequestId: 3,
+    groupId: 1,
+    icons: [{ title: '后来才到的旧结果' }],
+  })
+  assert.equal(stale, false)
+  assert.deepEqual(groups[0].items.map(item => item.title), ['示例文档'])
 })
 
 test('blank keyword or disabled local search leaves the original groups', () => {

@@ -2,14 +2,19 @@ package system
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"sun-panel/global"
+	"sun-panel/lib/iniConfig"
 	"sun-panel/models"
 
 	"github.com/gin-gonic/gin"
@@ -163,4 +168,90 @@ func TestFileListFiltersPagesAndStaysOnTheAccount(t *testing.T) {
 	if invalid := asFileUser(t, api.UpdateCategory, fmt.Sprintf(`{"id":%d,"category":"javascript"}`, saved.ID), 7); invalid["code"] == float64(0) {
 		t.Fatal("invalid category was saved")
 	}
+}
+
+func TestUploadImgUsesTheIconAndWallpaperEntries(t *testing.T) {
+	db := openFileDB(t)
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "conf.ini")
+	if err := os.WriteFile(configPath, []byte("[base]\nsource_path="+filepath.Join(dir, "uploads")+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	previous := global.Config
+	global.Config = iniConfig.NewIniConfig(configPath)
+	t.Cleanup(func() { global.Config = previous })
+
+	api := FileApi{}
+	icon := uploadImage(t, &api, "example-icon.png", "icon", 7)
+	if icon["code"] != float64(0) {
+		t.Fatalf("icon upload %#v", icon)
+	}
+	wallpaper := uploadImage(t, &api, "example-wallpaper.png", "wallpaper", 7)
+	if wallpaper["code"] != float64(0) {
+		t.Fatalf("wallpaper upload %#v", wallpaper)
+	}
+	var categories []string
+	if err := db.Table("files").Where("user_id = ?", 7).Order("file_name").Pluck("category", &categories).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(categories) != 2 || categories[0] != models.FileCategoryIcon || categories[1] != models.FileCategoryWallpaper {
+		t.Fatalf("categories %#v", categories)
+	}
+	found := asFileUser(t, api.GetList, `{"keyword":"example-wallpaper","limit":12}`, 7)
+	data, _ := found["data"].(map[string]interface{})
+	if data["count"] != float64(1) {
+		t.Fatalf("search %#v", data)
+	}
+	for i := 0; i < 11; i++ {
+		if _, err := (&models.File{}).AddFile(7, fmt.Sprintf("example-page-%02d.png", i), ".png", "./uploads/page.png", models.FileCategoryIcon); err != nil {
+			t.Fatal(err)
+		}
+	}
+	page := asFileUser(t, api.GetList, `{"page":1,"limit":12}`, 7)
+	pageData, _ := page["data"].(map[string]interface{})
+	list, _ := pageData["list"].([]interface{})
+	if pageData["count"] != float64(13) || len(list) != 12 {
+		t.Fatalf("first page %#v", pageData["count"])
+	}
+	next := asFileUser(t, api.GetList, `{"page":2,"limit":12}`, 7)
+	nextData, _ := next["data"].(map[string]interface{})
+	nextList, _ := nextData["list"].([]interface{})
+	if len(nextList) != 1 {
+		t.Fatalf("second page %#v", nextData)
+	}
+}
+
+func uploadImage(t *testing.T, api *FileApi, name, category string, userID uint) map[string]interface{} {
+	t.Helper()
+	png, err := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("imgfile", name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := part.Write(png); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.WriteField("category", category); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequest(http.MethodPost, "/api/file/uploadImg", body)
+	ctx.Request.Header.Set("Content-Type", writer.FormDataContentType())
+	ctx.Set("userInfo", models.User{BaseModel: models.BaseModel{ID: userID}})
+	api.UploadImg(ctx)
+	var payload map[string]interface{}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("response %s: %v", recorder.Body.String(), err)
+	}
+	return payload
 }

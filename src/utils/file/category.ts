@@ -17,6 +17,14 @@ export function displayFileCategory(value?: string | null): FileCategory {
   return 'uncategorized'
 }
 
+export function pageAfterListChange(page: number, total: number, limit = defaultLimit): number {
+  const size = limit > 0 ? Math.floor(limit) : defaultLimit
+  const last = Math.max(1, Math.ceil(Math.max(0, total) / size))
+  if (!page || page < 1)
+    return 1
+  return Math.min(Math.floor(page), last)
+}
+
 export function fileListRequest(input: {
   page?: number
   limit?: number

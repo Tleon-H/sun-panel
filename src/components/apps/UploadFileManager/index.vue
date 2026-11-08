@@ -5,7 +5,7 @@ import { deletes, getList, updateCategory } from '@/api/system/file'
 import { set as savePanelConfig } from '@/api/panel/userConfig'
 import { RoundCardModal, SvgIcon } from '@/components/common'
 import { copyToClipboard, timeFormat } from '@/utils/cmn'
-import { displayFileCategory, fileCategories, fileListRequest, type FileCategory } from '@/utils/file/category'
+import { displayFileCategory, fileCategories, fileListRequest, pageAfterListChange, type FileCategory } from '@/utils/file/category'
 import { t } from '@/locales'
 import { usePanelState } from '@/store'
 
@@ -29,6 +29,7 @@ const infoModalState = ref<InfoModalState>({
   fileInfo: null,
 })
 let keywordTimer: ReturnType<typeof setTimeout> | null = null
+let listSerial = 0
 const pageCount = computed(() => Math.max(1, Math.ceil(total.value / 12)))
 const categoryOptions = computed(() => fileCategories.map(value => ({
   label: t(`apps.uploadsFileManager.category.${value}`),
@@ -40,6 +41,7 @@ const filterOptions = computed(() => [
 ])
 
 async function getFileList() {
+  const serial = ++listSerial
   loading.value = true
   try {
     const query = fileListRequest({
@@ -48,14 +50,23 @@ async function getFileList() {
       keyword: keyword.value,
     })
     const { data } = await getList<Common.ListResponse<File.Info[]>>(query)
+    if (serial !== listSerial)
+      return
     imageList.value = (data.list ?? []).map(item => ({
       ...item,
       category: displayFileCategory(item.category),
     }))
     total.value = data.count ?? 0
+    const nextPage = pageAfterListChange(page.value, total.value, query.limit)
+    if (nextPage !== page.value) {
+      page.value = nextPage
+      await getFileList()
+      return
+    }
   }
   finally {
-    loading.value = false
+    if (serial === listSerial)
+      loading.value = false
   }
 }
 
@@ -167,6 +178,7 @@ onMounted(() => {
       v-model:value="keyword"
       class="mt-2"
       clearable
+      data-testid="file-name-search"
       :placeholder="$t('apps.uploadsFileManager.searchPlaceholder')"
       @update:value="onKeywordInput"
     />
@@ -176,7 +188,8 @@ onMounted(() => {
       </div>
       <NImageGroup v-else>
         <NGrid cols="2 300:2 600:4 900:6 1100:9" :x-gap="5" :y-gap="5">
-          <NGridItem v-for=" item, index in imageList" :key="index">
+          <NGridItem v-for=" item, index in imageList" :key="item.id || index">
+            <div class="file-card" :data-filename="item.fileName">
             <NCard size="small" style="border-radius: 5px;" :bordered="true">
               <template #cover>
                 <div class="card transparent-grid">
@@ -223,6 +236,7 @@ onMounted(() => {
                 </div>
               </template>
             </NCard>
+            </div>
           </NGridItem>
         </NGrid>
       </NImageGroup>

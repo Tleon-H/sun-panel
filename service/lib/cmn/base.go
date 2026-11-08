@@ -111,12 +111,12 @@ func StrToUint(s string) uint {
 // 获取系统信息
 func GetSysVersionInfo() Version_Info {
 	cBytes, _ := assets.Asset("assets/version")
-	c := string(cBytes)
-	info := strings.Split(c, "|")
+	// The version file ends with a newline. Keep that out of the displayed name and backup manifest.
+	info := strings.Split(strings.TrimSpace(string(cBytes)), "|")
 
 	return Version_Info{
-		Version_code: StrToInt(info[0]),
-		Version:      info[1],
+		Version_code: StrToInt(strings.TrimSpace(info[0])),
+		Version:      strings.TrimSpace(info[1]),
 	}
 }
 

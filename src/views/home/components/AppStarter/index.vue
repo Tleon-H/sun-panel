@@ -99,8 +99,15 @@ onMounted(() => {
     auth: 1,
   }
   // 初始化
-  if (authStore.userInfo?.role === 1)
+  if (authStore.userInfo?.role === 1) {
     apps.value.push(adminApp)
+    apps.value.push({
+      name: t('apps.backup.appName'),
+      componentName: 'Backup',
+      icon: 'lucide:download',
+      auth: 1,
+    })
+  }
 
   window.addEventListener('resize', handleResize)
   handleResize()
