@@ -38,19 +38,13 @@
   },
   "apps": {
     "about": {
-      "QQGroup": "QQ Group:",
-      "QR": "QR Code(recommend)",
-      "addQQGroupUrl": "Click to join",
       "appName": "About",
-      "author": "Author:",
-      "checkUpdate": "Check for new version",
-      "independentNote": "Leon Panel is based on open-source Sun-Panel v1.3.0. The display name has a leon suffix and is not official 1.8.1.",
+      "author": "Upstream author:",
+      "independentNote": "Leon Panel is based on the public MIT source of Sun-Panel v1.3.0. It is not official 1.8.1.",
       "upstreamProject": "Upstream project:",
-      "discussions": "Discussions:",
-      "donate": "☕Donate",
-      "frontVersionText": "Front-end version number",
-      "issue": "Feedback:",
-      "viewUpdateLog": "Click here to view update log"
+      "repository": "This repository:",
+      "license": "License:",
+      "frontVersionText": "Front-end version number"
     },
     "accountSwitch": {
       "appName": "Switch account",
@@ -301,6 +295,7 @@
     "url": "URL"
   },
   "login": {
+    "basedOn": "based on open-source",
     "loginButton": "Login",
     "passwordPlaceholder": "Password",
     "usernamePlaceholder": "Username",
