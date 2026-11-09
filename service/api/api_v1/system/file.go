@@ -37,21 +37,11 @@ func (a *FileApi) UploadImg(c *gin.Context) {
 		apiReturn.ErrorByCode(c, 1300)
 		return
 	} else {
-		fileExt := strings.ToLower(path.Ext(f.Filename))
-		agreeExts := []string{
-			".png",
-			".jpg",
-			".gif",
-			".jpeg",
-			".webp",
-			".svg",
-			".ico",
-		}
-
-		if !cmn.InArray(agreeExts, fileExt) {
+		if !allowedImageExt(f.Filename) {
 			apiReturn.ErrorByCode(c, 1301)
 			return
 		}
+		fileExt := strings.ToLower(path.Ext(f.Filename))
 		fileName := cmn.Md5(fmt.Sprintf("%s%s", f.Filename, time.Now().String()))
 		fildDir := fmt.Sprintf("%s/%d/%d/%d/", configUpload, time.Now().Year(), time.Now().Month(), time.Now().Day())
 		isExist, _ := cmn.PathExists(fildDir)
@@ -81,6 +71,8 @@ func (a *FileApi) UploadFiles(c *gin.Context) {
 		apiReturn.ErrorByCode(c, 1400)
 		return
 	}
+	// A user id in the form cannot assign these files to another account or mark them public.
+	_ = c.PostForm("userId")
 	configUpload := global.Config.GetValueString("base", "source_path")
 
 	form, err := c.MultipartForm()
@@ -89,11 +81,20 @@ func (a *FileApi) UploadFiles(c *gin.Context) {
 		return
 	}
 	files := form.File["files[]"]
+	if len(files) == 0 {
+		apiReturn.ErrorByCode(c, 1300)
+		return
+	}
 	errFiles := []string{}
 	succMap := map[string]string{}
-	for _, f := range files {
+	saved := []map[string]string{}
+	for i, f := range files {
+		if !allowedImageExt(f.Filename) {
+			errFiles = append(errFiles, f.Filename)
+			continue
+		}
 		fileExt := strings.ToLower(path.Ext(f.Filename))
-		fileName := cmn.Md5(fmt.Sprintf("%s%s", f.Filename, time.Now().String()))
+		fileName := cmn.Md5(fmt.Sprintf("%s%s%d", f.Filename, time.Now().String(), i))
 		fildDir := fmt.Sprintf("%s/%d/%d/%d/", configUpload, time.Now().Year(), time.Now().Month(), time.Now().Day())
 		isExist, _ := cmn.PathExists(fildDir)
 		if !isExist {
@@ -102,17 +103,28 @@ func (a *FileApi) UploadFiles(c *gin.Context) {
 		filepath := fmt.Sprintf("%s%s%s", fildDir, fileName, fileExt)
 		if c.SaveUploadedFile(f, filepath) != nil {
 			errFiles = append(errFiles, f.Filename)
-		} else {
-			// 成功
-			// 像数据库添加记录
-			mFile := models.File{}
-			mFile.AddFile(userInfo.ID, f.Filename, fileExt, filepath, category)
-			succMap[f.Filename] = filepath[1:]
+			continue
 		}
+		if _, err := (&models.File{}).AddFile(userInfo.ID, f.Filename, fileExt, filepath, category); err != nil {
+			os.Remove(filepath)
+			errFiles = append(errFiles, f.Filename)
+			continue
+		}
+		imageURL := ""
+		if len(filepath) > 0 {
+			imageURL = filepath[1:]
+		}
+		succMap[f.Filename] = imageURL
+		saved = append(saved, map[string]string{
+			"fileName": f.Filename,
+			"imageUrl": imageURL,
+			"category": category,
+		})
 	}
 
 	apiReturn.SuccessData(c, gin.H{
 		"succMap":  succMap,
+		"saved":    saved,
 		"errFiles": errFiles,
 	})
 }
@@ -130,6 +142,7 @@ func (a *FileApi) GetList(c *gin.Context) {
 			return
 		}
 	}
+	// An account id in the body cannot list another account, including that account's public images.
 	query, err := models.NormalizeFileListQuery(req.Page, req.Limit, req.Category, req.Keyword)
 	if err != nil {
 		apiReturn.ErrorByCode(c, 1400)
@@ -326,4 +339,13 @@ func uploadCategory(raw string) (string, bool) {
 		return models.FileCategoryUncategorized, true
 	}
 	return models.NormalizeFileCategory(raw)
+}
+
+func allowedImageExt(name string) bool {
+	switch strings.ToLower(path.Ext(name)) {
+	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico":
+		return true
+	default:
+		return false
+	}
 }

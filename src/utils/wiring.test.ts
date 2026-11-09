@@ -32,13 +32,35 @@ test('the icon component resets through the remote icon controller when its addr
 
 test('image uploads and the file manager use the category metadata', () => {
   const manager = source('src/components/apps/UploadFileManager/index.vue')
-  assert.match(manager, /fileListRequest\(/)
+  assert.match(manager, /ownFileQuery\(/)
+  assert.match(manager, /uploadFiles\(/)
+  assert.match(manager, /uploadCategoryForEntry\('other'\)/)
+  assert.match(manager, /multiple/)
   assert.match(manager, /updateCategory\(/)
   assert.match(manager, /displayFileCategory\(/)
   assert.doesNotMatch(manager, /v-html/)
   assert.match(source('src/components/apps/Style/index.vue'), /category: 'wallpaper'/)
   assert.match(source('src/views/home/components/EditItem/IconEditor.vue'), /category: 'icon'/)
   assert.match(source('service/api/api_v1/panel/itemIcon.go'), /FileCategoryIcon/)
+})
+
+test('the own gallery lists only the current account and stays beside the public gallery', () => {
+  const own = source('src/components/apps/OwnGallery/index.vue')
+  const gallery = source('src/components/apps/PublicGallery/index.vue')
+  assert.match(own, /getList/)
+  assert.match(own, /ownFileQuery\(/)
+  assert.doesNotMatch(own, /getPublicList/)
+  assert.doesNotMatch(own, /setPublic\(/)
+  assert.doesNotMatch(own, /v-html/)
+  assert.match(gallery, /getPublicList/)
+  assert.match(gallery, /publicFileQuery\(/)
+  assert.match(source('src/views/home/components/EditItem/IconEditor.vue'), /open-own-icons/)
+  assert.match(source('src/views/home/components/EditItem/IconEditor.vue'), /open-public-icons/)
+  assert.match(source('src/views/home/components/EditItem/IconEditor.vue'), /locked-category="icon"/)
+  assert.match(source('src/components/apps/Style/index.vue'), /open-own-wallpapers/)
+  assert.match(source('src/components/apps/Style/index.vue'), /open-public-wallpapers/)
+  assert.match(source('src/components/apps/Style/index.vue'), /locked-category="wallpaper"/)
+  assert.match(source('service/api/api_v1/system/file.go'), /allowedImageExt/)
 })
 
 test('the public gallery is separate from private files and only an administrator can mark one', () => {

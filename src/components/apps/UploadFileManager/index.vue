@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { NAlert, NButton, NButtonGroup, NCard, NEllipsis, NGrid, NGridItem, NImage, NImageGroup, NInput, NPagination, NSelect, NSpin, useDialog, useMessage } from 'naive-ui'
 import { computed, onMounted, ref } from 'vue'
-import { deletes, getList, setPublic, updateCategory } from '@/api/system/file'
+import { deletes, getList, setPublic, updateCategory, uploadFiles } from '@/api/system/file'
 import { set as savePanelConfig } from '@/api/panel/userConfig'
 import { RoundCardModal, SvgIcon } from '@/components/common'
 import { copyToClipboard, timeFormat } from '@/utils/cmn'
-import { displayFileCategory, fileCategories, fileListRequest, pageAfterListChange, type FileCategory } from '@/utils/file/category'
+import { displayFileCategory, fileCategories, ownFileQuery, pageAfterListChange, uploadCategoryForEntry, type FileCategory } from '@/utils/file/category'
 import { t } from '@/locales'
 import { useAuthStore, usePanelState } from '@/store'
 
@@ -30,6 +30,9 @@ const infoModalState = ref<InfoModalState>({
   title: '',
   fileInfo: null,
 })
+const batchInput = ref<HTMLInputElement | null>(null)
+const uploading = ref(false)
+const batchStatus = ref('')
 let keywordTimer: ReturnType<typeof setTimeout> | null = null
 let listSerial = 0
 const pageCount = computed(() => Math.max(1, Math.ceil(total.value / 12)))
@@ -46,7 +49,7 @@ async function getFileList() {
   const serial = ++listSerial
   loading.value = true
   try {
-    const query = fileListRequest({
+    const query = ownFileQuery({
       page: page.value,
       category: category.value,
       keyword: keyword.value,
@@ -90,6 +93,46 @@ function onKeywordInput() {
 function changePage(next: number) {
   page.value = next
   void getFileList()
+}
+
+function openBatchPicker() {
+  batchInput.value?.click()
+}
+
+async function onBatchSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  input.value = ''
+  if (files.length === 0)
+    return
+  uploading.value = true
+  batchStatus.value = ''
+  try {
+    const { code, data, msg } = await uploadFiles(files, uploadCategoryForEntry('other'))
+    if (code !== 0) {
+      batchStatus.value = `${t('common.uploadFail')}${msg ? `:${msg}` : ''}`
+      ms.error(batchStatus.value)
+      return
+    }
+    const saved = data?.saved?.length ?? 0
+    const failed = data?.errFiles ?? []
+    const parts = [t('apps.uploadsFileManager.batchSaved', { count: saved })]
+    if (failed.length > 0)
+      parts.push(t('apps.uploadsFileManager.batchFailed', { names: failed.join('、') }))
+    batchStatus.value = parts.join('')
+    if (saved > 0)
+      ms.success(t('apps.uploadsFileManager.batchSaved', { count: saved }))
+    else
+      ms.error(t('common.uploadFail'))
+    if (failed.length > 0)
+      ms.warning(t('apps.uploadsFileManager.batchFailed', { names: failed.join('、') }))
+    category.value = 'uncategorized'
+    page.value = 1
+    await getFileList()
+  }
+  finally {
+    uploading.value = false
+  }
 }
 
 async function togglePublic(item: File.Info) {
@@ -180,6 +223,26 @@ onMounted(() => {
         {{ $t('apps.publicGallery.manageHint') }}
       </div>
     </NAlert>
+    <div class="batch-upload">
+      <input
+        ref="batchInput"
+        class="batch-file"
+        type="file"
+        multiple
+        accept=".png,.jpg,.jpeg,.gif,.webp,.svg,.ico,image/png,image/jpeg,image/gif,image/webp,image/svg+xml,image/x-icon"
+        data-testid="batch-upload-input"
+        @change="onBatchSelected"
+      >
+      <NButton size="small" data-testid="batch-upload" :loading="uploading" @click="openBatchPicker">
+        {{ $t('apps.uploadsFileManager.batchUpload') }}
+      </NButton>
+      <div class="text-xs mt-1">
+        {{ $t('apps.uploadsFileManager.batchHint') }}
+      </div>
+      <div v-if="batchStatus" class="text-xs mt-1" data-testid="batch-upload-result">
+        {{ batchStatus }}
+      </div>
+    </div>
     <div class="file-filters">
       <button
         v-for="item in filterOptions"
@@ -204,7 +267,8 @@ onMounted(() => {
       <div v-if="imageList.length === 0 && !loading" class="flex">
         {{ keyword || category ? $t('apps.uploadsFileManager.noMatch') : $t('apps.uploadsFileManager.nothingText') }}
       </div>
-      <NImageGroup v-else>
+      <div v-else data-testid="own-file-list">
+        <NImageGroup>
         <NGrid cols="2 300:2 600:4 900:6 1100:9" :x-gap="5" :y-gap="5">
           <NGridItem v-for=" item, index in imageList" :key="item.id || index">
             <div class="file-card" :data-filename="item.fileName" :data-public="item.public ? 'true' : 'false'">
@@ -269,7 +333,8 @@ onMounted(() => {
             </div>
           </NGridItem>
         </NGrid>
-      </NImageGroup>
+        </NImageGroup>
+      </div>
     </div>
     <div v-if="total > 12" class="file-pages">
       <NPagination :page="page" :page-count="pageCount" @update:page="changePage" />
@@ -355,5 +420,17 @@ onMounted(() => {
   background: #0f172a;
   color: #f8fafc;
   border-color: #e2e8f0;
+}
+
+.batch-upload {
+  position: relative;
+  margin-top: 8px;
+}
+
+.batch-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
 }
 </style>

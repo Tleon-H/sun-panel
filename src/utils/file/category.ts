@@ -56,3 +56,31 @@ export function publicFileQuery(input: {
     keyword: input.keyword,
   })
 }
+
+// ownFileQuery lists the current account only. An account id in the input is dropped,
+// so another account's public images cannot be requested from this query.
+export function ownFileQuery(input: {
+  page?: number
+  limit?: number
+  category?: string
+  keyword?: string
+  userId?: unknown
+  user_id?: unknown
+}): FileListRequest {
+  return fileListRequest({
+    page: input.page,
+    limit: input.limit,
+    category: input.category,
+    keyword: input.keyword,
+  })
+}
+
+// uploadCategoryForEntry follows the existing single-file rule.
+// The icon entry stores icon, the wallpaper entry stores wallpaper, and every other entry stays uncategorized.
+export function uploadCategoryForEntry(entry: string): FileCategory {
+  if (entry === 'icon')
+    return 'icon'
+  if (entry === 'wallpaper')
+    return 'wallpaper'
+  return 'uncategorized'
+}

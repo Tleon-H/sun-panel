@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { displayFileCategory, fileListRequest, pageAfterListChange, publicFileQuery } from './category.ts'
+import { displayFileCategory, fileListRequest, ownFileQuery, pageAfterListChange, publicFileQuery, uploadCategoryForEntry } from './category.ts'
 
 test('blank and unknown file categories stay uncategorized', () => {
   assert.equal(displayFileCategory(''), 'uncategorized')
@@ -49,6 +49,32 @@ test('a public gallery query drops any account id', () => {
   })
   assert.equal(Object.hasOwn(query, 'userId'), false)
   assert.equal(Object.hasOwn(query, 'user_id'), false)
+})
+
+test('an own-gallery query drops any account id', () => {
+  const query = ownFileQuery({
+    page: 2,
+    category: 'wallpaper',
+    keyword: '我的壁纸',
+    userId: 3,
+    user_id: 9,
+  })
+  assert.deepEqual(query, {
+    page: 2,
+    limit: 12,
+    category: 'wallpaper',
+    keyword: '我的壁纸',
+  })
+  assert.equal(Object.hasOwn(query, 'userId'), false)
+  assert.equal(Object.hasOwn(query, 'user_id'), false)
+})
+
+test('batch and single uploads use the same entry categories', () => {
+  assert.equal(uploadCategoryForEntry('icon'), 'icon')
+  assert.equal(uploadCategoryForEntry('wallpaper'), 'wallpaper')
+  assert.equal(uploadCategoryForEntry('other'), 'uncategorized')
+  assert.equal(uploadCategoryForEntry(''), 'uncategorized')
+  assert.equal(uploadCategoryForEntry('public'), 'uncategorized')
 })
 
 test('deleting the last file on the last page moves back to a page that still has files', () => {
