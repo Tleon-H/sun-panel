@@ -6,6 +6,7 @@ import { useAppStore, useAuthStore, usePanelState, useUserStore } from '@/store'
 import { languageOptions } from '@/utils/defaultData'
 import type { Language, Theme } from '@/store/modules/app/helper'
 import { logout } from '@/api'
+import { forgetStoredAccountToken } from '@/utils/account/storage'
 import { RoundCardModal, SvgIcon } from '@/components/common/'
 import { updateInfo, updatePassword } from '@/api/system/user'
 import { updateLocalUserInfo } from '@/utils/cmn'
@@ -63,7 +64,9 @@ const updatePasswordModalFormRules: FormRules = {
 }
 
 async function logoutApi() {
+  const token = authStore.token
   await logout()
+  forgetStoredAccountToken(token)
   userStore.resetUserInfo()
   authStore.removeToken()
   panelState.removeState()

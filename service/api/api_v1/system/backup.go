@@ -102,7 +102,13 @@ func exportMessage(err error) string {
 		return "当前使用的是 MySQL，这项功能不会导出数据库，也不会生成备份包。请自行备份 MySQL。"
 	case errors.Is(err, backup.ErrOutside):
 		return "配置的目录超出应用目录或包含不允许的路径，已拒绝导出。"
-	case errors.Is(err, backup.ErrSnapshot), errors.Is(err, backup.ErrIncomplete), errors.Is(err, backup.ErrLimit):
+	case errors.Is(err, backup.ErrIncomplete):
+		return "缺少导出所需的配置或文件，没有生成备份包。当前服务仍在运行。"
+	case errors.Is(err, backup.ErrLimit):
+		return "文件数量或总体积超过导出上限，没有生成备份包。当前服务仍在运行。"
+	case errors.Is(err, os.ErrPermission):
+		return "没有读取导出内容的权限，没有生成备份包。当前服务仍在运行。"
+	case errors.Is(err, backup.ErrSnapshot):
 		return "数据库快照失败，没有生成备份包。当前服务仍在运行。"
 	default:
 		return "备份导出失败，没有生成备份包。当前服务仍在运行。"

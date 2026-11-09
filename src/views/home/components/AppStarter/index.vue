@@ -34,6 +34,11 @@ const apps = ref<App[]>([
     icon: 'material-symbols-person-edit-outline-rounded',
   },
   {
+    name: t('apps.accountSwitch.appName'),
+    componentName: 'AccountSwitch',
+    icon: 'lucide:arrow-left-right',
+  },
+  {
     name: t('apps.baseSettings.appName'),
     componentName: 'Style',
     icon: 'ion-color-palette-outline',

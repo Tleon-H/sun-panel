@@ -15,6 +15,13 @@ export function logout<T>() {
   })
 }
 
+export function logoutToken(token: string) {
+  return fetch(`${import.meta.env.VITE_GLOB_API_URL}/logout`, {
+    method: 'POST',
+    headers: { token },
+  }).catch(() => undefined)
+}
+
 export function UserUpdateInfo<T>(headImage: string, name: string) {
   return post<T>({
     url: '/user/updateInfo',

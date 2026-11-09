@@ -52,6 +52,15 @@
       "issue": "Feedback:",
       "viewUpdateLog": "Click here to view update log"
     },
+    "accountSwitch": {
+      "appName": "Switch account",
+      "warning": "This browser remembers accounts you have signed in to. Passwords are not saved. Switching shows only that account's icons, files, and settings. Visitors do not get this list. Forgetting an account removes it from this browser and does not delete it on the server. On a shared computer, sign out and forget accounts before you leave.",
+      "current": "Current",
+      "add": "Sign in to another account",
+      "loginFailed": "Sign-in failed. Check the account and password.",
+      "forget": "Forget {name}",
+      "savedOnThisBrowser": "Accounts remembered on this browser"
+    },
     "backup": {
       "appName": "Backup export",
       "download": "Download backup",

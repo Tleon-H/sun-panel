@@ -23,6 +23,69 @@ import (
 	"gorm.io/gorm"
 )
 
+func TestExportMessageUsesTheActualFailure(t *testing.T) {
+	cases := []struct {
+		err      error
+		contains string
+		absent   string
+	}{
+		{backup.ErrNotSQLite, "MySQL", "数据库快照失败"},
+		{backup.ErrOutside, "超出应用目录", "数据库快照失败"},
+		{backup.ErrIncomplete, "缺少导出所需的配置或文件", "数据库快照失败"},
+		{backup.ErrLimit, "超过导出上限", "数据库快照失败"},
+		{os.ErrPermission, "没有读取导出内容的权限", "数据库快照失败"},
+		{backup.ErrSnapshot, "数据库快照失败", "缺少导出所需的配置"},
+		{os.ErrClosed, "备份导出失败", "数据库快照失败"},
+	}
+	for _, item := range cases {
+		message := exportMessage(item.err)
+		if !strings.Contains(message, item.contains) || strings.Contains(message, item.absent) {
+			t.Fatalf("%v => %s", item.err, message)
+		}
+	}
+
+	gin.SetMode(gin.TestMode)
+	base := t.TempDir()
+	dbPath := filepath.Join(base, "database", "database.db")
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	gormDB, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := gormDB.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = sqlDB.Close() })
+	previousDB := global.Db
+	global.Db = gormDB
+	t.Cleanup(func() { global.Db = previousDB })
+	restore := useConfig(t, "[base]\ndatabase_drive=sqlite\nsource_path=./uploads\n[sqlite]\nfile_path=./database/database.db\n")
+	defer restore()
+	admin := models.User{BaseModel: models.BaseModel{ID: 1}, Role: 1}
+
+	missing := callExportAt(t, &BackupApi{}, &admin, `{"path":"/etc/passwd"}`, base)
+	if missing.code == 0 || !strings.Contains(missing.body, "缺少导出所需的配置或文件") || strings.Contains(missing.body, "数据库快照失败") || strings.HasPrefix(missing.body, "PK") {
+		t.Fatalf("missing config %#v", missing.body)
+	}
+
+	if err := os.MkdirAll(filepath.Join(base, "conf"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(base, "conf", "conf.ini"), []byte("database_drive=sqlite\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := sqlDB.Close(); err != nil {
+		t.Fatal(err)
+	}
+	snapshot := callExportAt(t, &BackupApi{}, &admin, `{"path":"/etc/passwd"}`, base)
+	if snapshot.code == 0 || !strings.Contains(snapshot.body, "数据库快照失败") || strings.Contains(snapshot.body, "缺少导出所需的配置") || strings.HasPrefix(snapshot.body, "PK") {
+		t.Fatalf("snapshot %#v", snapshot.body)
+	}
+}
+
 func TestBackupExportRejectsVisitorRegularUserAndMySQL(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	api := BackupApi{}

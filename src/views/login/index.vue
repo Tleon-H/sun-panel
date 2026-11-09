@@ -2,19 +2,23 @@
 import { NButton, NCard, NForm, NFormItem, NGradientText, NInput, NSelect, useMessage } from 'naive-ui'
 import { ref } from 'vue'
 import { login } from '@/api'
-import { useAppStore, useAuthStore } from '@/store'
+import { useAppStore, useAuthStore, usePanelState } from '@/store'
 import { SvgIcon } from '@/components/common'
 import { router } from '@/router'
 import { t } from '@/locales'
 import { languageOptions } from '@/utils/defaultData'
 import type { Language } from '@/store/modules/app/helper'
+import { rememberAccount, type AccountSession } from '@/utils/account/sessions'
+import { loadAccountSessions, saveAccountSessions } from '@/utils/account/storage'
 
 // const userStore = useUserStore()
 const authStore = useAuthStore()
 const appStore = useAppStore()
+const panelState = usePanelState()
 const ms = useMessage()
 const loading = ref(false)
 const languageValue = ref<Language>(appStore.language)
+const savedAccounts = ref<AccountSession[]>(loadAccountSessions())
 
 // const isShowCaptcha = ref<boolean>(false)
 // const isShowRegister = ref<boolean>(false)
@@ -29,6 +33,9 @@ const loginPost = async () => {
   try {
     const res = await login<Login.LoginResponse>(form.value)
     if (res.code === 0) {
+      const next = rememberAccount(savedAccounts.value, res.data)
+      saveAccountSessions(next)
+      savedAccounts.value = next
       authStore.setToken(res.data.token)
       authStore.setUserInfo(res.data)
 
@@ -48,6 +55,18 @@ const loginPost = async () => {
     // 请检查网络或者服务器错误
     console.log(error)
   }
+}
+
+function resume(session: AccountSession) {
+  panelState.removeState()
+  authStore.setToken(session.token)
+  authStore.setUserInfo({
+    id: session.id,
+    username: session.username,
+    name: session.name,
+    role: session.role,
+  })
+  router.push({ path: '/' })
 }
 
 function handleSubmit() {
@@ -77,6 +96,21 @@ function handleChangeLanuage(value: Language) {
         <NGradientText :size="30" type="success" class="!font-bold">
           {{ $t('common.appName') }}
         </NGradientText>
+      </div>
+      <div v-if="savedAccounts.length" class="saved-accounts">
+        <div class="text-xs mb-2 text-slate-500">
+          {{ $t('apps.accountSwitch.savedOnThisBrowser') }}
+        </div>
+        <NButton
+          v-for="item in savedAccounts"
+          :key="item.id"
+          block
+          class="mb-2"
+          :data-username="item.username"
+          @click="resume(item)"
+        >
+          {{ item.name }}（{{ item.username }}）
+        </NButton>
       </div>
       <NForm :model="form" label-width="100px" @keydown.enter="handleSubmit">
         <NFormItem>
