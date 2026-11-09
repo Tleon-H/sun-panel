@@ -60,7 +60,18 @@
       "download": "Download backup",
       "downloading": "Preparing the backup",
       "started": "The backup download has started. Keep the file where only you can access it.",
-      "warning": "This download is for your own storage. The archive contains a SQLite database snapshot, uploaded images, configuration, and custom files. It can include password hashes, keys, and private navigation data. Do not send it to anyone or put it in a public directory. Restore is not implemented. Downloading does not overwrite data or stop the program. This is not an official 1.8.1 backup and is not promised to open in an official release. If the program uses MySQL, this button does not export the database; back up MySQL yourself."
+      "warning": "This download is for your own storage. The archive contains a SQLite database snapshot, uploaded images, configuration, and custom files. It can include password hashes, keys, and private navigation data. Do not send it to anyone or put it in a public directory. Downloading does not overwrite data or stop the program. This is not an official 1.8.1 backup. If the program uses MySQL, this page cannot export or restore the database; back up MySQL yourself.",
+      "restoreTitle": "Restore from a backup made by this program",
+      "restoreRisk": "Restore overwrites the current database, uploaded images, conf/conf.ini, and web/custom. Changes made after the backup are lost, and accounts and passwords return to that point. This cannot be undone. Only a SQLite backup exported by this program is accepted. Official 1.8.1 and other incompatible archives are rejected. Paths must stay inside the application directory. MySQL cannot be restored here. The program keeps running; port and other configuration changes apply on the next start.",
+      "choose": "Choose a backup",
+      "restore": "Restore this backup",
+      "restoreConfirmTitle": "Confirm overwriting current data",
+      "restoreConfirmBody": "Replace the current data with the selected backup? The current data is not kept automatically. Use a backup exported by this program, and keep a separate copy of anything you still need.",
+      "acknowledge": "I understand this overwrites the current data",
+      "confirmRestore": "Confirm restore",
+      "cancel": "Cancel",
+      "restoring": "Restoring",
+      "restored": "The backup has replaced the current data. The page will reload."
     },
     "baseSettings": {
       "appName": "Style Settings",

@@ -3,9 +3,11 @@ package system
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -261,6 +263,238 @@ func callExportAt(t *testing.T, api *BackupApi, user *models.User, body, baseDir
 		contentType: recorder.Header().Get("Content-Type"),
 		disposition: recorder.Header().Get("Content-Disposition"),
 	}
+	if strings.HasPrefix(response.body, "{") {
+		var payload map[string]interface{}
+		if err := json.Unmarshal([]byte(response.body), &payload); err == nil {
+			if code, ok := payload["code"].(float64); ok {
+				response.code = code
+			}
+		}
+	}
+	return response
+}
+
+func TestBackupRestoreRequiresAdminConfirmationAndRejectsBadPackages(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	api := BackupApi{}
+	visitor := callRestore(t, &api, nil, "", nil, "")
+	if visitor.code != 1000 {
+		t.Fatalf("visitor %#v", visitor.body)
+	}
+	regular := models.User{BaseModel: models.BaseModel{ID: 2}, Role: 2}
+	denied := callRestore(t, &api, &regular, backup.ConfirmOverwrite, []byte("nope"), "")
+	if denied.code != 1005 {
+		t.Fatalf("regular %#v", denied.body)
+	}
+
+	base, db, sqlDB := restoreService(t)
+	defer sqlDB.Close()
+	archive := servicePackage(t, base, sqlDB)
+	if _, err := db.Exec(`insert into marks(name) values ('changed')`); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(base, "uploads", "keep.txt"), []byte("CHANGED"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	admin := models.User{BaseModel: models.BaseModel{ID: 1}, Role: 1}
+	unconfirmed := callRestore(t, &api, &admin, "", archive, base)
+	if unconfirmed.code == 0 || !strings.Contains(unconfirmed.body, "再次确认") {
+		t.Fatalf("unconfirmed %#v", unconfirmed.body)
+	}
+	var count int
+	if err := db.QueryRow(`select count(*) from marks where name = 'changed'`).Scan(&count); err != nil || count != 1 {
+		t.Fatalf("unconfirmed restore changed the database: %v count=%d", err, count)
+	}
+	body, err := os.ReadFile(filepath.Join(base, "uploads", "keep.txt"))
+	if err != nil || string(body) != "CHANGED" {
+		t.Fatalf("unconfirmed restore changed uploads: %s %v", body, err)
+	}
+
+	outside := filepath.Join(t.TempDir(), "secret.txt")
+	if err := os.WriteFile(outside, []byte("OUTSIDE-MARKER-7d2b"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	bad := callRestore(t, &api, &admin, backup.ConfirmOverwrite, []byte("not-a-backup"), base)
+	if bad.code == 0 || !strings.Contains(bad.body, "没有改动现有数据") || strings.Contains(bad.body, "OUTSIDE") {
+		t.Fatalf("bad package %#v", bad.body)
+	}
+	secret, err := os.ReadFile(outside)
+	if err != nil || string(secret) != "OUTSIDE-MARKER-7d2b" {
+		t.Fatal("outside file changed")
+	}
+
+	if !backup.TryBegin() {
+		t.Fatal("lock was already held")
+	}
+	busy := callRestore(t, &api, &admin, backup.ConfirmOverwrite, archive, base)
+	backup.End()
+	if busy.code == 0 || !strings.Contains(busy.body, "已有备份正在导出或恢复") {
+		t.Fatalf("busy %#v", busy.body)
+	}
+	if err := db.QueryRow(`select count(*) from marks where name = 'changed'`).Scan(&count); err != nil || count != 1 {
+		t.Fatalf("busy restore changed the database: %v count=%d", err, count)
+	}
+
+	mysqlRestore := useConfig(t, "[base]\ndatabase_drive=mysql\nsource_path=./uploads\n[sqlite]\nfile_path=./database/database.db\n")
+	mysql := callRestore(t, &api, &admin, backup.ConfirmOverwrite, archive, base)
+	mysqlRestore()
+	if mysql.code == 0 || !strings.Contains(mysql.body, "MySQL") {
+		t.Fatalf("mysql %#v", mysql.body)
+	}
+	if err := db.QueryRow(`select count(*) from marks where name = 'changed'`).Scan(&count); err != nil || count != 1 {
+		t.Fatalf("mysql restore changed the database: %v count=%d", err, count)
+	}
+}
+
+func TestBackupRestoreOverwritesWithTheSnapshot(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	base, db, sqlDB := restoreService(t)
+	defer sqlDB.Close()
+	archive := servicePackage(t, base, sqlDB)
+	if _, err := db.Exec(`insert into marks(name) values ('changed')`); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(base, "uploads", "keep.txt"), []byte("CHANGED"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(base, "uploads", "new.txt"), []byte("NEW"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	admin := models.User{BaseModel: models.BaseModel{ID: 1}, Role: 1}
+	response := callRestore(t, &BackupApi{}, &admin, backup.ConfirmOverwrite, archive, base)
+	if response.code != 0 || !strings.Contains(response.body, `"code":0`) {
+		t.Fatalf("restore %#v", response.body)
+	}
+	var count int
+	if err := db.QueryRow(`select count(*) from marks where name = 'seed-before'`).Scan(&count); err != nil || count != 1 {
+		t.Fatalf("snapshot row missing: %v count=%d", err, count)
+	}
+	if err := db.QueryRow(`select count(*) from marks where name = 'changed'`).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("changed row remained: %v count=%d", err, count)
+	}
+	kept, err := os.ReadFile(filepath.Join(base, "uploads", "keep.txt"))
+	if err != nil || string(kept) != "INSIDE-OK" {
+		t.Fatalf("upload = %s %v", kept, err)
+	}
+	if _, err := os.Stat(filepath.Join(base, "uploads", "new.txt")); !os.IsNotExist(err) {
+		t.Fatalf("new upload remained: %v", err)
+	}
+	if _, err := db.Exec(`insert into marks(name) values ('still-serving')`); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func restoreService(t *testing.T) (string, *sql.DB, *sql.DB) {
+	t.Helper()
+	base := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(base, "uploads"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(base, "uploads", "keep.txt"), []byte("INSIDE-OK"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(base, "conf"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	conf := "[base]\ndatabase_drive=sqlite\nsource_path=./uploads\n[sqlite]\nfile_path=./database/database.db\n"
+	if err := os.WriteFile(filepath.Join(base, "conf", "conf.ini"), []byte(conf), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(base, "web", "custom"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(base, "web", "custom", "index.css"), []byte("/* example */"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dbPath := filepath.Join(base, "database", "database.db")
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	gormDB, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := gormDB.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+	if _, err := sqlDB.Exec(`create table marks(name text)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := sqlDB.Exec(`insert into marks(name) values ('seed-before')`); err != nil {
+		t.Fatal(err)
+	}
+	previousDB := global.Db
+	global.Db = gormDB
+	t.Cleanup(func() { global.Db = previousDB })
+	restore := useConfig(t, conf)
+	t.Cleanup(restore)
+	return base, sqlDB, sqlDB
+}
+
+func servicePackage(t *testing.T, base string, db *sql.DB) []byte {
+	t.Helper()
+	result, err := backup.Build(context.Background(), backup.Options{
+		BaseDir:       base,
+		DatabaseDrive: "sqlite",
+		UploadsPath:   "uploads",
+		ConfFile:      "conf/conf.ini",
+		CustomDir:     "web/custom",
+		SQLitePath:    "database/database.db",
+		Version:       "1.3.0+leon.7",
+		VersionCode:   10,
+		DB:            db,
+		TempParent:    t.TempDir(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(result.Dir) })
+	body, err := os.ReadFile(result.ZipPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return body
+}
+
+func callRestore(t *testing.T, api *BackupApi, user *models.User, confirm string, archive []byte, baseDir string) exportResponse {
+	t.Helper()
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	if confirm != "" {
+		if err := writer.WriteField("confirm", confirm); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := writer.WriteField("path", "/etc/passwd"); err != nil {
+		t.Fatal(err)
+	}
+	if archive != nil {
+		part, err := writer.CreateFormFile("file", "leon-panel-backup.zip")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := part.Write(archive); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequest(http.MethodPost, "/api/backup/restore", body)
+	ctx.Request.Header.Set("Content-Type", writer.FormDataContentType())
+	if user != nil {
+		ctx.Set("userInfo", *user)
+	}
+	if baseDir == "" {
+		api.Restore(ctx)
+	} else {
+		api.restoreAt(ctx, baseDir, "1.3.0+leon.8", 10)
+	}
+	response := exportResponse{status: recorder.Code, body: recorder.Body.String()}
 	if strings.HasPrefix(response.body, "{") {
 		var payload map[string]interface{}
 		if err := json.Unmarshal([]byte(response.body), &payload); err == nil {

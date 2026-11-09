@@ -309,7 +309,8 @@ try {
   await page.reload({ waitUntil: 'networkidle0' })
   await openApp(page, '备份导出')
   await page.waitForSelector('[data-testid="backup-download"]')
-  await page.waitForFunction(() => document.body.innerText.includes('不要发给别人'))
+  await page.waitForSelector('[data-testid="backup-restore-risk"]')
+  await page.waitForFunction(() => document.body.innerText.includes('不要发给别人') && document.body.innerText.includes('覆盖现有数据'))
   await page.screenshot({ path: join(shots, 'leon-backup-desktop.png') })
   note('已保存桌面备份页截图')
 
@@ -328,11 +329,11 @@ names = archive.namelist()
 if any(name.startswith("/") or ".." in name.split("/") for name in names):
     raise SystemExit("archive path escaped")
 manifest = json.loads(archive.read("manifest.json"))
-assert manifest["version"] == "1.3.0+leon.7", manifest.get("version")
+assert manifest["version"] == "1.3.0+leon.8", manifest.get("version")
 assert manifest["database"]["method"] == "sqlite-vacuum-into"
 assert manifest["database"]["integrity"] == "ok"
 assert manifest["database"]["included"] is True
-assert manifest["restore"] == "not-implemented"
+assert manifest["restore"] == "overwrite"
 assert manifest["compatibleWithOfficial181"] is False
 assert any("密码哈希" in item for item in manifest["warnings"])
 for item in manifest["files"]:
@@ -376,13 +377,14 @@ print(json.dumps({"integrity": integrity, "files": len(manifest["files"]), "rows
   note('已保存手机备份页截图')
 
   const visitor = await page.evaluate(async (origin) => {
-    const response = await fetch(`${origin}/api/backup/export`, { method: 'POST' })
-    const payload = await response.json()
-    return payload.code
+    const root = origin.replace(/\/$/, '')
+    const exported = await fetch(`${root}/api/backup/export`, { method: 'POST' })
+    const restored = await fetch(`${root}/api/backup/restore`, { method: 'POST' })
+    return { exportCode: (await exported.json()).code, restoreCode: (await restored.json()).code }
   }, baseUrl.replace(/\/$/, ''))
-  if (visitor !== 1000)
-    throw new Error(`访客返回 ${visitor}`)
-  note('未登录导出被拒绝')
+  if (visitor.exportCode !== 1000 || visitor.restoreCode !== 1000)
+    throw new Error(`访客返回 ${visitor.exportCode}/${visitor.restoreCode}`)
+  note('未登录导出和恢复被拒绝')
 
   const regularPassword = randomBytes(12).toString('hex')
   const regular = await page.evaluate(async (session, secret) => {
@@ -405,13 +407,13 @@ print(json.dumps({"integrity": integrity, "files": len(manifest["files"]), "rows
   const denied = await page.evaluate(async () => {
     const raw = localStorage.getItem('AUTH_TOKEN')
     const session = JSON.parse(raw).data.token
-    const response = await fetch('/api/backup/export', { method: 'POST', headers: { token: session } })
-    const payload = await response.json()
-    return payload.code
+    const exported = await fetch('/api/backup/export', { method: 'POST', headers: { token: session } })
+    const restored = await fetch('/api/backup/restore', { method: 'POST', headers: { token: session } })
+    return { exportCode: (await exported.json()).code, restoreCode: (await restored.json()).code }
   })
-  if (denied !== 1005)
-    throw new Error(`普通账号导出返回 ${denied}`)
-  note('普通账号没有入口，导出被拒绝')
+  if (denied.exportCode !== 1005 || denied.restoreCode !== 1005)
+    throw new Error(`普通账号导出/恢复返回 ${denied.exportCode}/${denied.restoreCode}`)
+  note('普通账号没有入口，导出和恢复被拒绝')
   console.log('全部页面检查通过')
 }
 finally {
