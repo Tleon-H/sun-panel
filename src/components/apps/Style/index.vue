@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import type { UploadFileInfo } from 'naive-ui'
-import { NButton, NCard, NColorPicker, NGrid, NGridItem, NInput, NInputGroup, NPopconfirm, NSelect, NSlider, NSwitch, NUpload, NUploadDragger, useMessage } from 'naive-ui'
+import { NButton, NCard, NColorPicker, NGrid, NGridItem, NInput, NInputGroup, NModal, NPopconfirm, NSelect, NSlider, NSwitch, NUpload, NUploadDragger, useMessage } from 'naive-ui'
 import { useAuthStore, usePanelState } from '@/store'
 import { set as setUserConfig } from '@/api/panel/userConfig'
 import { PanelPanelConfigStyleEnum } from '@/enums/panel'
 import { t } from '@/locales'
+import PublicGallery from '@/components/apps/PublicGallery/index.vue'
 
 const authStore = useAuthStore()
 const panelState = usePanelState()
 const ms = useMessage()
 const showWallpaperInput = ref(false)
+const showPublicWallpapers = ref(false)
 
 const isSaveing = ref(false)
 
@@ -61,6 +63,11 @@ function handleUploadBackgroundFinish({
   else
     ms.error(t('common.uploadFail'))
   return file
+}
+
+function usePublicWallpaper(src: string) {
+  panelState.panelConfig.backgroundImageSrc = src
+  showPublicWallpapers.value = false
 }
 
 function uploadCloud() {
@@ -215,6 +222,12 @@ function resetPanelConfig() {
           </div>
         </NUploadDragger>
       </NUpload>
+      <NButton class="mt-2" size="small" data-testid="open-public-wallpapers" @click="showPublicWallpapers = true">
+        {{ $t('apps.publicGallery.open') }}
+      </NButton>
+      <NModal v-model:show="showPublicWallpapers" preset="card" :title="$t('apps.publicGallery.appName')" style="width: min(720px, 96vw);">
+        <PublicGallery locked-category="wallpaper" selectable @select="usePublicWallpaper" />
+      </NModal>
 
       <div class="flex items-center mt-[5px]">
         <span class="mr-[10px]">{{ $t('apps.baseSettings.customImageAddress') }}</span>

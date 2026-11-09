@@ -49,13 +49,18 @@ func openFileDB(t *testing.T) *gorm.DB {
 
 func asFileUser(t *testing.T, method func(*gin.Context), body string, userID uint) map[string]interface{} {
 	t.Helper()
+	return asFileRole(t, method, body, userID, 2)
+}
+
+func asFileRole(t *testing.T, method func(*gin.Context), body string, userID uint, role int) map[string]interface{} {
+	t.Helper()
 	gin.SetMode(gin.TestMode)
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(body))
 	ctx.Request.Header.Set("Content-Type", "application/json")
 	if userID != 0 {
-		ctx.Set("userInfo", models.User{BaseModel: models.BaseModel{ID: userID}})
+		ctx.Set("userInfo", models.User{BaseModel: models.BaseModel{ID: userID}, Role: role})
 	}
 	method(ctx)
 	var payload map[string]interface{}
@@ -254,4 +259,164 @@ func uploadImage(t *testing.T, api *FileApi, name, category string, userID uint)
 		t.Fatalf("response %s: %v", recorder.Body.String(), err)
 	}
 	return payload
+}
+
+func TestPublicGalleryShowsOnlyMarkedFiles(t *testing.T) {
+	db := openFileDB(t)
+	api := FileApi{}
+	shared, err := (&models.File{}).AddFile(7, "公共图标.png", ".png", "./uploads/public-icon.png", models.FileCategoryIcon)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if shared.IsPublic {
+		t.Fatal("a new upload was public")
+	}
+	privateFile, err := (&models.File{}).AddFile(7, "私人图标.png", ".png", "./uploads/private-icon.png", models.FileCategoryIcon)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wallpaper, err := (&models.File{}).AddFile(7, "公共壁纸.png", ".png", "./uploads/public-wall.png", models.FileCategoryWallpaper)
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := (&models.File{}).AddFile(8, "别人的私人图.png", ".png", "./uploads/other-private.png", models.FileCategoryIcon)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	empty := asFileRole(t, api.PublicList, `{"userId":7}`, 8, 2)
+	emptyData, _ := empty["data"].(map[string]interface{})
+	if empty["code"] != float64(0) || emptyData["count"] != float64(0) {
+		t.Fatalf("unmarked gallery %#v", empty)
+	}
+	if denied := asFileRole(t, api.SetPublic, fmt.Sprintf(`{"id":%d,"public":true}`, other.ID), 8, 2); denied["code"] != float64(1005) {
+		t.Fatalf("regular user published %#v", denied)
+	}
+	stolen := asFileRole(t, api.SetPublic, fmt.Sprintf(`{"id":%d,"public":true,"userId":8}`, other.ID), 7, 1)
+	if stolen["code"] == float64(0) {
+		t.Fatal("an administrator published another account's file")
+	}
+	if published := asFileRole(t, api.SetPublic, fmt.Sprintf(`{"id":%d,"public":true,"userId":8}`, shared.ID), 7, 1); published["code"] != float64(0) {
+		t.Fatalf("publish own %#v", published)
+	}
+	if published := asFileRole(t, api.SetPublic, fmt.Sprintf(`{"id":%d,"public":true}`, wallpaper.ID), 7, 1); published["code"] != float64(0) {
+		t.Fatalf("publish wallpaper %#v", published)
+	}
+	var row struct {
+		UserId   uint
+		IsPublic bool
+		Src      string
+	}
+	if err := db.Table("files").Select("user_id, is_public, src").Where("id = ?", shared.ID).Take(&row).Error; err != nil {
+		t.Fatal(err)
+	}
+	if row.UserId != 7 || !row.IsPublic || row.Src != "./uploads/public-icon.png" {
+		t.Fatalf("published row %#v", row)
+	}
+	if err := db.Table("files").Select("user_id, is_public, src").Where("id = ?", other.ID).Take(&row).Error; err != nil {
+		t.Fatal(err)
+	}
+	if row.UserId != 8 || row.IsPublic {
+		t.Fatalf("other account changed %#v", row)
+	}
+
+	wildcard := asFileRole(t, api.PublicList, `{"userId":8,"keyword":"%"}`, 8, 2)
+	wildcardData, _ := wildcard["data"].(map[string]interface{})
+	if wildcardData["count"] != float64(0) {
+		t.Fatalf("wildcard listed public files %#v", wildcardData)
+	}
+	gallery := asFileRole(t, api.PublicList, `{"userId":7,"user_id":8}`, 8, 2)
+	names := publicNames(t, gallery)
+	if !containsName(names, "公共图标.png") || !containsName(names, "公共壁纸.png") || containsName(names, "私人图标.png") || containsName(names, "别人的私人图.png") {
+		t.Fatalf("gallery names %#v", names)
+	}
+	icons := asFileRole(t, api.PublicList, `{"category":"icon","userId":7}`, 8, 2)
+	iconNames := publicNames(t, icons)
+	if len(iconNames) != 1 || iconNames[0] != "公共图标.png" {
+		t.Fatalf("icon gallery %#v", iconNames)
+	}
+
+	own := asFileRole(t, api.GetList, `{"userId":7}`, 8, 2)
+	ownNames := listedNames(t, own)
+	if containsName(ownNames, "公共图标.png") || containsName(ownNames, "私人图标.png") {
+		t.Fatalf("own list included another account %#v", ownNames)
+	}
+	adminList := asFileRole(t, api.GetList, `{}`, 7, 1)
+	adminNames := listedNames(t, adminList)
+	if !containsName(adminNames, "私人图标.png") || !containsName(adminNames, "公共图标.png") || containsName(adminNames, "别人的私人图.png") {
+		t.Fatalf("admin own list %#v", adminNames)
+	}
+	adminData, _ := adminList["data"].(map[string]interface{})
+	for _, item := range adminData["list"].([]interface{}) {
+		record, _ := item.(map[string]interface{})
+		if record["fileName"] == "公共图标.png" && record["public"] != true {
+			t.Fatalf("own public flag %#v", record)
+		}
+		if record["fileName"] == "私人图标.png" && record["public"] != false {
+			t.Fatalf("own private flag %#v", record)
+		}
+	}
+
+	if hidden := asFileRole(t, api.SetPublic, fmt.Sprintf(`{"id":%d,"public":false,"userId":8}`, shared.ID), 7, 1); hidden["code"] != float64(0) {
+		t.Fatalf("unpublish %#v", hidden)
+	}
+	after := publicNames(t, asFileRole(t, api.PublicList, `{"userId":7}`, 8, 2))
+	if containsName(after, "公共图标.png") || !containsName(after, "公共壁纸.png") {
+		t.Fatalf("after unpublish %#v", after)
+	}
+	if visitor := asFileRole(t, api.PublicList, `{}`, 0, 0); visitor["code"] != float64(1000) {
+		t.Fatalf("visitor list %#v", visitor)
+	}
+	if visitor := asFileRole(t, api.SetPublic, fmt.Sprintf(`{"id":%d,"public":true}`, privateFile.ID), 0, 0); visitor["code"] != float64(1000) {
+		t.Fatalf("visitor publish %#v", visitor)
+	}
+	removed := asFileUser(t, api.Deletes, fmt.Sprintf(`{"ids":[%d]}`, wallpaper.ID), 7)
+	if removed["code"] != float64(0) {
+		t.Fatalf("delete %#v", removed)
+	}
+	if names := publicNames(t, asFileRole(t, api.PublicList, `{}`, 8, 2)); len(names) != 0 {
+		t.Fatalf("deleted public file remained %#v", names)
+	}
+}
+
+func publicNames(t *testing.T, payload map[string]interface{}) []string {
+	t.Helper()
+	if payload["code"] != float64(0) {
+		t.Fatalf("public list %#v", payload)
+	}
+	data, _ := payload["data"].(map[string]interface{})
+	list, _ := data["list"].([]interface{})
+	names := make([]string, 0, len(list))
+	for _, item := range list {
+		row, _ := item.(map[string]interface{})
+		if _, ok := row["userId"]; ok {
+			t.Fatalf("public row exposed the owner %#v", row)
+		}
+		if _, ok := row["path"]; ok {
+			t.Fatalf("public row exposed the stored path %#v", row)
+		}
+		names = append(names, fmt.Sprint(row["fileName"]))
+	}
+	return names
+}
+
+func listedNames(t *testing.T, payload map[string]interface{}) []string {
+	t.Helper()
+	data, _ := payload["data"].(map[string]interface{})
+	list, _ := data["list"].([]interface{})
+	names := make([]string, 0, len(list))
+	for _, item := range list {
+		row, _ := item.(map[string]interface{})
+		names = append(names, fmt.Sprint(row["fileName"]))
+	}
+	return names
+}
+
+func containsName(names []string, name string) bool {
+	for _, item := range names {
+		if item == name {
+			return true
+		}
+	}
+	return false
 }

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { NButton, NColorPicker, NInput, NRadio, NUpload } from 'naive-ui'
+import { NButton, NColorPicker, NInput, NModal, NRadio, NUpload } from 'naive-ui'
 import type { UploadFileInfo } from 'naive-ui'
-import { computed, defineProps } from 'vue'
+import { computed, defineProps, ref } from 'vue'
 import { ItemIcon } from '@/components/common'
+import PublicGallery from '@/components/apps/PublicGallery/index.vue'
 import { useAuthStore } from '@/store'
 import { apiRespErrMsg } from '@/utils/request/apiMessage'
 
@@ -13,6 +14,7 @@ const emit = defineEmits<{
   (e: 'update:itemIcon', visible: Panel.ItemIcon): void // 定义修改父组件（prop内）的值的事件
 }>()
 const authStore = useAuthStore()
+const showPublicIcons = ref(false)
 
 // 默认图标背景色
 const defautSwatchesBackground = [
@@ -79,6 +81,12 @@ const handleUploadFinish = ({
   }
 
   return file
+}
+
+function usePublicIcon(src: string) {
+  itemIconInfo.value.src = src
+  emit('update:itemIcon', itemIconInfo.value || null)
+  showPublicIcons.value = false
 }
 </script>
 
@@ -154,6 +162,12 @@ const handleUploadFinish = ({
                 {{ $t('iconItem.selectUpload') }}
               </NButton>
             </NUpload>
+            <NButton class="mt-1" size="small" data-testid="open-public-icons" @click="showPublicIcons = true">
+              {{ $t('apps.publicGallery.open') }}
+            </NButton>
+            <NModal v-model:show="showPublicIcons" preset="card" :title="$t('apps.publicGallery.appName')" style="width: min(720px, 96vw);">
+              <PublicGallery locked-category="icon" selectable @select="usePublicIcon" />
+            </NModal>
           </div>
         </div>
       </div>

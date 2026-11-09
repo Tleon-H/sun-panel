@@ -162,9 +162,99 @@ func (a *FileApi) GetList(c *gin.Context) {
 			"updateTime": v.UpdatedAt,
 			"path":       v.Src,
 			"category":   models.DisplayFileCategory(v.Category),
+			"public":     v.IsPublic,
 		})
 	}
 	apiReturn.SuccessListData(c, data, count)
+}
+
+func (a *FileApi) PublicList(c *gin.Context) {
+	userInfo, ok := base.GetCurrentUserInfo(c)
+	if !ok || userInfo.ID == 0 {
+		apiReturn.ErrorByCode(c, 1000)
+		return
+	}
+	req := struct {
+		Page     int    `json:"page"`
+		Limit    int    `json:"limit"`
+		Category string `json:"category"`
+		Keyword  string `json:"keyword"`
+		UserId   uint   `json:"userId"`
+	}{}
+	if c.Request.ContentLength != 0 {
+		if err := c.ShouldBindBodyWith(&req, binding.JSON); err != nil {
+			apiReturn.ErrorParamFomat(c, err.Error())
+			return
+		}
+	}
+	// userId in the body cannot choose another account. The list is every public image.
+	_ = req.UserId
+	query, err := models.NormalizeFileListQuery(req.Page, req.Limit, req.Category, req.Keyword)
+	if err != nil {
+		apiReturn.ErrorByCode(c, 1400)
+		return
+	}
+
+	var count int64
+	if err := models.PublicFileListScope(global.Db, query).Count(&count).Error; err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
+	}
+	list := []models.File{}
+	offset := (query.Page - 1) * query.Limit
+	if err := models.PublicFileListScope(global.Db, query).Order("created_at desc").Offset(offset).Limit(query.Limit).Find(&list).Error; err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
+	}
+	data := []map[string]interface{}{}
+	for _, v := range list {
+		src := v.Src
+		if len(src) > 0 {
+			src = src[1:]
+		}
+		data = append(data, map[string]interface{}{
+			"src":        src,
+			"fileName":   v.FileName,
+			"id":         v.ID,
+			"createTime": v.CreatedAt,
+			"category":   models.DisplayFileCategory(v.Category),
+			"public":     true,
+		})
+	}
+	apiReturn.SuccessListData(c, data, count)
+}
+
+func (a *FileApi) SetPublic(c *gin.Context) {
+	userInfo, ok := base.GetCurrentUserInfo(c)
+	if !ok || userInfo.ID == 0 {
+		apiReturn.ErrorByCode(c, 1000)
+		return
+	}
+	if userInfo.Role != 1 {
+		apiReturn.ErrorByCode(c, 1005)
+		return
+	}
+	req := struct {
+		ID     uint `json:"id"`
+		Public bool `json:"public"`
+		UserId uint `json:"userId"`
+	}{}
+	if err := c.ShouldBindBodyWith(&req, binding.JSON); err != nil {
+		apiReturn.ErrorParamFomat(c, err.Error())
+		return
+	}
+	// userId in the body cannot publish another account's file or change the owner.
+	_ = req.UserId
+	updated, err := (&models.File{}).SetOwnPublic(global.Db, userInfo.ID, req.ID, req.Public)
+	if err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
+	}
+	if !updated {
+		apiReturn.ErrorDataNotFound(c)
+		return
+	}
+	apiReturn.Success(c)
 }
 
 func (a *FileApi) UpdateCategory(c *gin.Context) {

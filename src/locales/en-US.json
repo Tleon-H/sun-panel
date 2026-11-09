@@ -121,6 +121,17 @@
       "deleteWarnText": "Are you sure you want to delete this group [{name}]? The application icons in this group will be lost after deletion.",
       "groupName": "Group name"
     },
+    "publicGallery": {
+      "alert": "This list shows only images an administrator has marked public. Other people's private images do not appear here. Choosing one saves its address on your own icon or wallpaper.",
+      "appName": "Public gallery",
+      "empty": "No public images yet",
+      "manageHint": "Only an administrator can mark or unmark their own images as public. A regular account has no control and cannot publish someone else's image.",
+      "open": "Choose from the public gallery",
+      "pick": "Use",
+      "publish": "Make public",
+      "published": "Public",
+      "unpublish": "Make private"
+    },
     "uploadsFileManager": {
       "alertText": "Filter your own uploads by icon, wallpaper, or uncategorized. Changing a category only changes the label. It does not move the file or change its link.",
       "appName": "Upload File Management",

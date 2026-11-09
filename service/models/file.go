@@ -30,6 +30,8 @@ type File struct {
 	Ext      string `gorm:"varchar(255)" json:"ext"`      // 扩展名
 	// Category is metadata only. It never changes the stored path.
 	Category string `json:"category" gorm:"type:varchar(32);not null;default:uncategorized"`
+	// IsPublic is a separate flag. Existing rows stay private, and the file stays owned by UserId.
+	IsPublic bool `json:"public" gorm:"column:is_public;not null;default:false"`
 }
 
 type FileListQuery struct {
@@ -120,6 +122,23 @@ func FileListScope(db *gorm.DB, userID uint, query FileListQuery) *gorm.DB {
 	return scope
 }
 
+// PublicFileListScope lists images an administrator has marked public.
+// It never accepts an account id, so a caller cannot ask for someone else's private files.
+func PublicFileListScope(db *gorm.DB, query FileListQuery) *gorm.DB {
+	scope := db.Model(&File{}).Where("is_public = ?", true)
+	switch query.Category {
+	case "":
+	case FileCategoryUncategorized:
+		scope = scope.Where("(category = ? OR category = ? OR category IS NULL)", FileCategoryUncategorized, "")
+	default:
+		scope = scope.Where("category = ?", query.Category)
+	}
+	if query.Keyword != "" {
+		scope = scope.Where(fileNameLikeSQL, fileKeywordLike(query.Keyword))
+	}
+	return scope
+}
+
 // AddFile records an upload. The path is stored unchanged.
 // An unrecognized category is saved as uncategorized instead of failing after the bytes are written.
 func (m *File) AddFile(userId uint, fileName, ext, src, category string) (File, error) {
@@ -147,4 +166,22 @@ func (m *File) UpdateOwnCategory(db *gorm.DB, userID, id uint, category string) 
 		return false, result.Error
 	}
 	return result.RowsAffected > 0, nil
+}
+
+// SetOwnPublic marks or unmarks a file owned by userID.
+// Another account's id changes nothing, and the stored path and owner stay the same.
+func (m *File) SetOwnPublic(db *gorm.DB, userID, id uint, public bool) (bool, error) {
+	var count int64
+	err := db.Model(&File{}).Where("user_id = ? AND id = ?", userID, id).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	if count == 0 {
+		return false, nil
+	}
+	err = db.Model(&File{}).Where("user_id = ? AND id = ?", userID, id).Update("is_public", public).Error
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
