@@ -47,7 +47,7 @@ func TestSQLiteSnapshotIsConsistentAndLeavesTheServerOpen(t *testing.T) {
 	if result.Manifest.Database.Method != "sqlite-vacuum-into" || result.Manifest.Database.Integrity != "ok" || !result.Manifest.Database.Included {
 		t.Fatalf("database metadata %#v", result.Manifest.Database)
 	}
-	if result.Manifest.Restore != "not-implemented" || result.Manifest.CompatibleWithOfficial181 {
+	if result.Manifest.Restore != RestoreSupported || result.Manifest.CompatibleWithOfficial181 {
 		t.Fatalf("manifest claims restore or official compatibility: %#v", result.Manifest)
 	}
 	if result.Manifest.Version != "1.3.0+leon.4" || result.Manifest.VersionCode != 10 {

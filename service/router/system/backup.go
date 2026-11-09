@@ -12,5 +12,6 @@ func InitBackupRouter(router *gin.RouterGroup) {
 	private := router.Group("", middleware.LoginInterceptor, middleware.AdminInterceptor)
 	{
 		private.POST("/backup/export", api.Export)
+		private.POST("/backup/restore", api.Restore)
 	}
 }

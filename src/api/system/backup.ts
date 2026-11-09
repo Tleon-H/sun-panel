@@ -1,5 +1,7 @@
 import service from '@/utils/request/axios'
+import { post } from '@/utils/request'
 import { useAuthStore } from '@/store'
+import { buildRestoreForm } from '@/utils/backup/restore'
 import { isZipContentType, readBackupFailure } from '@/utils/backup/response'
 
 export async function downloadBackup() {
@@ -25,4 +27,13 @@ export async function downloadBackup() {
   link.click()
   link.remove()
   URL.revokeObjectURL(url)
+}
+
+export async function restoreBackup(file: File) {
+  const result = await post({
+    url: '/backup/restore',
+    data: buildRestoreForm(file),
+  })
+  if (result.code !== 0)
+    throw new Error(result.msg || '恢复失败')
 }

@@ -23,7 +23,7 @@ func TestVersionFileKeepsUpstreamNumericCode(t *testing.T) {
 	if code != 10 {
 		t.Fatalf("numeric version code must stay 10 so existing comparisons are unchanged, got %d", code)
 	}
-	if parts[1] != "1.3.0+leon.7" {
+	if parts[1] != "1.3.0+leon.8" {
 		t.Fatalf("display version = %s", parts[1])
 	}
 	if strings.Contains(parts[1], "1.8.1") || strings.Contains(parts[1], "2.0") {

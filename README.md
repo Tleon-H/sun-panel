@@ -12,7 +12,7 @@ An independent navigation panel based on the public MIT source of Sun-Panel v1.3
 
 Leon Panel 是 [Sun-Panel v1.3.0](https://github.com/hslr-s/sun-panel) 公开源码上的独立版本，不是官方仓库，也不是官方 v1.8.1。
 
-- 显示版本：`1.3.0+leon.7`
+- 显示版本：`1.3.0+leon.8`
 - 内部数字版本：`10`（原来用来比较版本的数字，这一版保持不变）
 
 版权和 MIT 许可证保留在 [LICENSE](./LICENSE)。上游仓库是 [hslr-s/sun-panel](https://github.com/hslr-s/sun-panel)。本仓库没有改许可证，也没有加入或绕过任何授权检查。实现和差异的详细说明见 [doc/LEON-PANEL.md](./doc/LEON-PANEL.md)。
@@ -45,12 +45,12 @@ Leon Panel 是 [Sun-Panel v1.3.0](https://github.com/hslr-s/sun-panel) 公开源
 - 图片分类、按文件名搜索和分页。升级前已有的文件仍是未分类。
 - 批量上传：上传文件管理可以一次选择多张图片。
 - 自有图库与公共图库：项目图标和壁纸可以从当前账号自己的图片里选用；管理员可以把自己的图片标成公共，其他已登录账号可以浏览并选用。
-- 管理员 SQLite 备份导出：只导出，不导入，不恢复，不覆盖现有数据。
+- 管理员 SQLite 备份导出：可以下载本程序自己的备份包。
+- 整站覆盖恢复：管理员可以从本程序自己的 SQLite 备份包覆盖恢复。恢复会换掉现有数据，页面先说明风险，管理员勾选确认后才会执行。不接受官方备份。MySQL 不能在这里恢复。
 - 多账号切换：在这台浏览器记住多个已登录账号，并在系统应用和登录页切换。不保存密码。
 
 ## 尚未实现
 
-- 整站覆盖恢复
 - OpenAPI
 - Docker 套接字控制
 - 批量删除
