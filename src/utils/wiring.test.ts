@@ -30,6 +30,18 @@ test('the icon component resets through the remote icon controller when its addr
   assert.match(icon, /data-request/)
 })
 
+test('batch upload keeps the multipart body inside the shared request wrapper', () => {
+  const request = source('src/utils/request/index.ts')
+  const upload = source('src/api/system/file.ts')
+  assert.match(request, /prepareHttpRequest\(/)
+  assert.doesNotMatch(request, /Object\.assign\(/)
+  assert.match(upload, /new FormData\(\)/)
+  assert.match(upload, /form\.append\('files\[\]', file\)/)
+  assert.match(upload, /form\.append\('category', category\)/)
+  assert.match(upload, /data: form/)
+  assert.doesNotMatch(upload, /Content-Type/)
+})
+
 test('image uploads and the file manager use the category metadata', () => {
   const manager = source('src/components/apps/UploadFileManager/index.vue')
   assert.match(manager, /ownFileQuery\(/)
