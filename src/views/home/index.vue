@@ -7,7 +7,7 @@ import { Clock, SearchBox, SystemMonitor } from '@/components/deskModule'
 import { SvgIcon } from '@/components/common'
 import { deletes, getListByGroupId, saveSort } from '@/api/panel/itemIcon'
 import { getList as getGroupList } from '@/api/panel/itemIconGroup'
-import { filterIconGroups, moveMatchIndex } from '@/utils/search/filterIcons'
+import { acceptLoadedIcons, filterIconGroups, moveMatchIndex } from '@/utils/search/filterIcons'
 
 import { setTitle, updateLocalUserInfo } from '@/utils/cmn'
 import { useAuthStore, usePanelState } from '@/store'
@@ -93,26 +93,37 @@ function handWindowIframeIdLoad(payload: Event) {
   windowIframeIsLoad.value = false
 }
 
+let iconLoadRequest = 0
+
 function getList() {
-  // 获取组数据
-  getGroupList<Common.ListResponse<ItemGroup[]>>().then(({ code, data, msg }) => {
-    if (code === 0)
-      items.value = data.list
-    for (let i = 0; i < data.list.length; i++) {
-      const element = data.list[i]
-      if (element.id)
-        updateItemIconGroupByNet(i, element.id)
-    }
+  const requestId = ++iconLoadRequest
+  getGroupList<Common.ListResponse<ItemGroup[]>>().then(({ code, data }) => {
+    if (requestId !== iconLoadRequest || code !== 0)
+      return
+    items.value = data.list || []
     applySearchFilter()
-    // console.log(items)
+    for (let i = 0; i < items.value.length; i++) {
+      const element = items.value[i]
+      if (element.id)
+        updateItemIconGroupByNet(element.id, requestId)
+    }
   })
 }
 
-// 从后端获取组下面的图标
-function updateItemIconGroupByNet(itemIconGroupIndex: number, itemIconGroupId: number) {
+function updateItemIconGroupByNet(itemIconGroupId: number, requestId = iconLoadRequest) {
   getListByGroupId<Common.ListResponse<Panel.ItemInfo[]>>(itemIconGroupId).then((res) => {
-    if (res.code === 0)
-      items.value[itemIconGroupIndex].items = res.data.list
+    if (res.code !== 0)
+      return
+    const applied = acceptLoadedIcons({
+      groups: items.value,
+      requestId,
+      currentRequestId: iconLoadRequest,
+      groupId: itemIconGroupId,
+      icons: res.data.list || [],
+    })
+    if (!applied)
+      return
+    applySearchFilter()
   })
 }
 
@@ -315,7 +326,7 @@ function handleSetSortStatus(groupIndex: number, sortStatus: boolean) {
   if (!sortStatus) {
     // 单独更新组
     if (items.value[groupIndex] && items.value[groupIndex].id)
-      updateItemIconGroupByNet(groupIndex, items.value[groupIndex].id as number)
+        updateItemIconGroupByNet(items.value[groupIndex].id as number)
   }
 }
 

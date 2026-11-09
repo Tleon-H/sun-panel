@@ -52,6 +52,22 @@
       "issue": "Feedback:",
       "viewUpdateLog": "Click here to view update log"
     },
+    "accountSwitch": {
+      "appName": "Switch account",
+      "warning": "This browser remembers accounts you have signed in to. Passwords are not saved. Switching shows only that account's icons, files, and settings. Visitors do not get this list. Forgetting an account removes it from this browser and does not delete it on the server. On a shared computer, sign out and forget accounts before you leave.",
+      "current": "Current",
+      "add": "Sign in to another account",
+      "loginFailed": "Sign-in failed. Check the account and password.",
+      "forget": "Forget {name}",
+      "savedOnThisBrowser": "Accounts remembered on this browser"
+    },
+    "backup": {
+      "appName": "Backup export",
+      "download": "Download backup",
+      "downloading": "Preparing the backup",
+      "started": "The backup download has started. Keep the file where only you can access it.",
+      "warning": "This download is for your own storage. The archive contains a SQLite database snapshot, uploaded images, configuration, and custom files. It can include password hashes, keys, and private navigation data. Do not send it to anyone or put it in a public directory. Restore is not implemented. Downloading does not overwrite data or stop the program. This is not an official 1.8.1 backup and is not promised to open in an official release. If the program uses MySQL, this button does not export the database; back up MySQL yourself."
+    },
     "baseSettings": {
       "appName": "Style Settings",
       "bottomMargin": "Bottom margin",
@@ -106,16 +122,25 @@
       "groupName": "Group name"
     },
     "uploadsFileManager": {
-      "alertText": "Here you can manage wallpapers and icons you have uploaded.",
+      "alertText": "Filter your own uploads by icon, wallpaper, or uncategorized. Changing a category only changes the label. It does not move the file or change its link.",
       "appName": "Upload File Management",
+      "category": {
+        "all": "All",
+        "icon": "Icon",
+        "uncategorized": "Uncategorized",
+        "wallpaper": "Wallpaper"
+      },
+      "categoryLabel": "Category",
       "copyFailed": "Copy failed",
       "copyLink": "Copy link",
       "copySuccess": "Link copied successfully. You can paste it in the address bar.",
       "deleteWarningText": "Cannot be recovered after deletion. Are you sure you want to continue?",
       "fileName": "Original file name",
       "infoTitle": "File details",
+      "noMatch": "No images match this filter",
       "nothingText": "You haven't uploaded any images yet.",
       "path": "File path",
+      "searchPlaceholder": "Search by file name",
       "setWallpaper": "Set as wallpaper",
       "uploadTime": "Upload time"
     },

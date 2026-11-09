@@ -34,6 +34,11 @@ const apps = ref<App[]>([
     icon: 'material-symbols-person-edit-outline-rounded',
   },
   {
+    name: t('apps.accountSwitch.appName'),
+    componentName: 'AccountSwitch',
+    icon: 'lucide:arrow-left-right',
+  },
+  {
     name: t('apps.baseSettings.appName'),
     componentName: 'Style',
     icon: 'ion-color-palette-outline',
@@ -99,8 +104,15 @@ onMounted(() => {
     auth: 1,
   }
   // 初始化
-  if (authStore.userInfo?.role === 1)
+  if (authStore.userInfo?.role === 1) {
     apps.value.push(adminApp)
+    apps.value.push({
+      name: t('apps.backup.appName'),
+      componentName: 'Backup',
+      icon: 'lucide:download',
+      auth: 1,
+    })
+  }
 
   window.addEventListener('resize', handleResize)
   handleResize()

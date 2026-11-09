@@ -15,7 +15,7 @@
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --noEmit",
-    "test:unit": "node --experimental-strip-types --test src/utils/icon/remoteIcon.test.ts src/utils/search/filterIcons.test.ts src/utils/search/engines.test.ts src/utils/monitor/pollLifecycle.test.ts src/utils/wiring.test.ts",
+    "test:unit": "node --experimental-strip-types --test src/utils/icon/remoteIcon.test.ts src/utils/search/filterIcons.test.ts src/utils/search/engines.test.ts src/utils/monitor/pollLifecycle.test.ts src/utils/file/category.test.ts src/utils/backup/response.test.ts src/utils/account/sessions.test.ts src/utils/wiring.test.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "bootstrap": "pnpm install && pnpm run common:prepare",

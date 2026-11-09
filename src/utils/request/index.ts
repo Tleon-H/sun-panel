@@ -4,6 +4,7 @@ import { apiRespErrMsg, message } from './apiMessage'
 import { t } from '@/locales'
 import { useAppStore, useAuthStore } from '@/store'
 import { router } from '@/router'
+import { forgetStoredAccountToken } from '@/utils/account/storage'
 
 let loginMessageShow = false
 export interface HttpOption {
@@ -47,12 +48,14 @@ function http<T = any>(
       }
 
       router.push({ path: '/login' })
+      forgetStoredAccountToken(authStore.token)
       authStore.removeToken()
       return res.data
     }
 
     if (res.data.code === 1000) {
       router.push({ path: '/login' })
+      forgetStoredAccountToken(authStore.token)
       authStore.removeToken()
       return res.data
     }

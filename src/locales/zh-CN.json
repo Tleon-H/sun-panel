@@ -52,6 +52,22 @@
       "issue": "建议反馈：",
       "viewUpdateLog": "点此查看更新说明"
     },
+    "accountSwitch": {
+      "appName": "切换账号",
+      "warning": "这里只记住这台浏览器里你登录过的账号，不保存密码。切换后只能看到那个账号自己的图标、文件和设置，不能查看别人的私人内容。访客没有这个入口。忘记某个账号只是从这台浏览器移除，不会删除服务器上的账号。共用这台电脑时，离开前请退出并忘记。",
+      "current": "当前",
+      "add": "登录另一个账号",
+      "loginFailed": "登录失败，请检查账号和密码。",
+      "forget": "忘记 {name}",
+      "savedOnThisBrowser": "这台浏览器记住的账号"
+    },
+    "backup": {
+      "appName": "备份导出",
+      "download": "下载备份",
+      "downloading": "正在准备备份，请稍候",
+      "started": "备份已开始下载。请保存在只有你能访问的地方。",
+      "warning": "这个备份只给你自己保存。压缩包里有 SQLite 数据库快照、上传的图片、配置文件和自定义文件，可能包含密码哈希、密钥和私人导航。不要发给别人，也不要放到公开目录。这里没有恢复功能，下载不会覆盖当前数据，也不会关闭程序。它不是官方 1.8.1 的备份，也不保证能和官方版本互相打开。如果程序使用的是 MySQL，这个按钮不会导出数据库，请自行备份 MySQL。"
+    },
     "baseSettings": {
       "appName": "风格设置",
       "bottomMargin": "下边距",
@@ -106,16 +122,25 @@
       "groupName": "分组名称"
     },
     "uploadsFileManager": {
-      "alertText": "你可以在这里管理你上传过的壁纸和图标",
+      "alertText": "可以按图标、壁纸或未分类查看自己上传的图片。修改分类只改变标记，不会移动文件，也不会改变原来的链接。",
       "appName": "上传文件管理",
+      "category": {
+        "all": "全部",
+        "icon": "图标",
+        "uncategorized": "未分类",
+        "wallpaper": "壁纸"
+      },
+      "categoryLabel": "分类",
       "copyFailed": "复制失败",
       "copyLink": "复制链接",
       "copySuccess": "链接复制成功，可以在图标地址栏",
       "deleteWarningText": "删除后无法恢复，你确定要继续吗？",
       "fileName": "原文件名",
       "infoTitle": "文件详情",
+      "noMatch": "没有符合条件的图片",
       "nothingText": "你还没有上传过任何图片",
       "path": "文件路径",
+      "searchPlaceholder": "按文件名搜索",
       "setWallpaper": "设置为壁纸",
       "uploadTime": "上传时间"
     },

@@ -5,6 +5,7 @@ type ApiSystem struct {
 	LoginApi        LoginApi
 	UserApi         UserApi
 	FileApi         FileApi
+	BackupApi       BackupApi
 	NoticeApi       NoticeApi
 	ModuleConfigApi ModuleConfigApi
 	MonitorApi      MonitorApi
