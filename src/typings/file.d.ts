@@ -7,6 +7,7 @@ declare namespace File {
 		method: number
 		ext: string
 		category?: string
+		public?: boolean
 	}
 
 

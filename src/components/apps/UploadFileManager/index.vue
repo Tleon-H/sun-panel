@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { NAlert, NButton, NButtonGroup, NCard, NEllipsis, NGrid, NGridItem, NImage, NImageGroup, NInput, NPagination, NSelect, NSpin, useDialog, useMessage } from 'naive-ui'
 import { computed, onMounted, ref } from 'vue'
-import { deletes, getList, updateCategory } from '@/api/system/file'
+import { deletes, getList, setPublic, updateCategory } from '@/api/system/file'
 import { set as savePanelConfig } from '@/api/panel/userConfig'
 import { RoundCardModal, SvgIcon } from '@/components/common'
 import { copyToClipboard, timeFormat } from '@/utils/cmn'
 import { displayFileCategory, fileCategories, fileListRequest, pageAfterListChange, type FileCategory } from '@/utils/file/category'
 import { t } from '@/locales'
-import { usePanelState } from '@/store'
+import { useAuthStore, usePanelState } from '@/store'
 
 interface InfoModalState {
   title: string
@@ -18,6 +18,8 @@ const imageList = ref<File.Info[]>([])
 const ms = useMessage()
 const dialog = useDialog()
 const panelStore = usePanelState()
+const authStore = useAuthStore()
+const isAdmin = computed(() => authStore.userInfo?.role === 1)
 const loading = ref(false)
 const page = ref(1)
 const total = ref(0)
@@ -88,6 +90,19 @@ function onKeywordInput() {
 function changePage(next: number) {
   page.value = next
   void getFileList()
+}
+
+async function togglePublic(item: File.Info) {
+  if (!isAdmin.value || !item.id)
+    return
+  const { code, msg } = await setPublic(item.id, !item.public)
+  if (code === 0) {
+    ms.success(t('common.success'))
+    await getFileList()
+  }
+  else {
+    ms.error(`${t('common.failed')}:${msg}`)
+  }
 }
 
 async function changeCategory(item: File.Info, value: string) {
@@ -161,6 +176,9 @@ onMounted(() => {
     <NSpin v-show="loading" size="small" />
     <NAlert type="info" :bordered="false">
       {{ $t('apps.uploadsFileManager.alertText') }}
+      <div v-if="isAdmin">
+        {{ $t('apps.publicGallery.manageHint') }}
+      </div>
     </NAlert>
     <div class="file-filters">
       <button
@@ -189,7 +207,7 @@ onMounted(() => {
       <NImageGroup v-else>
         <NGrid cols="2 300:2 600:4 900:6 1100:9" :x-gap="5" :y-gap="5">
           <NGridItem v-for=" item, index in imageList" :key="item.id || index">
-            <div class="file-card" :data-filename="item.fileName">
+            <div class="file-card" :data-filename="item.fileName" :data-public="item.public ? 'true' : 'false'">
             <NCard size="small" style="border-radius: 5px;" :bordered="true">
               <template #cover>
                 <div class="card transparent-grid">
@@ -210,6 +228,9 @@ onMounted(() => {
                     @update:value="(value: string) => changeCategory(item, value)"
                   />
                 </div>
+                <div v-if="item.public" class="text-xs mt-1">
+                  {{ $t('apps.publicGallery.published') }}
+                </div>
                 <div class="flex justify-center mt-[10px]">
                   <NButtonGroup>
                     <NButton size="tiny" tertiary style="cursor: pointer;" :title="$t('apps.uploadsFileManager.copyLink')" @click="copyImageUrl(item.src)">
@@ -226,6 +247,15 @@ onMounted(() => {
                       <template #icon>
                         <SvgIcon icon="lucide:wallpaper" />
                       </template>
+                    </NButton>
+                    <NButton
+                      v-if="isAdmin"
+                      size="tiny"
+                      tertiary
+                      data-testid="file-public-toggle"
+                      @click="togglePublic(item)"
+                    >
+                      {{ item.public ? $t('apps.publicGallery.unpublish') : $t('apps.publicGallery.publish') }}
                     </NButton>
                     <NButton size="tiny" tertiary type="error" style="cursor: pointer;" :title="$t('common.delete')" @click="handleDelete(item.id as number)">
                       <template #icon>

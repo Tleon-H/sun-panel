@@ -39,3 +39,20 @@ export function fileListRequest(input: {
     : ''
   return { page, limit, category, keyword }
 }
+
+// publicFileQuery keeps only the gallery filters. An account id in the input is dropped.
+export function publicFileQuery(input: {
+  page?: number
+  limit?: number
+  category?: string
+  keyword?: string
+  userId?: unknown
+  user_id?: unknown
+}): FileListRequest {
+  return fileListRequest({
+    page: input.page,
+    limit: input.limit,
+    category: input.category,
+    keyword: input.keyword,
+  })
+}

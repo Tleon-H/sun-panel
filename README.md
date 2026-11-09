@@ -31,9 +31,9 @@ A server, NAS navigation panel, Homepage, Browser homepage.
 ![](./doc/images/main-dark.png)
 
 > [!IMPORTANT]
-> This repository’s independent build is **Leon Panel**, based on the public MIT source of [Sun-Panel](https://github.com/hslr-s/sun-panel) **v1.3.0**. The display version is `1.3.0+leon.5`; the internal numeric version stays `10`. It is not an official later release, including v1.8.1. The upstream copyright and MIT license stay in place. See [doc/LEON-PANEL.md](./doc/LEON-PANEL.md).
+> This repository’s independent build is **Leon Panel**, based on the public MIT source of [Sun-Panel](https://github.com/hslr-s/sun-panel) **v1.3.0**. The display version is `1.3.0+leon.6`; the internal numeric version stays `10`. It is not an official later release, including v1.8.1. The upstream copyright and MIT license stay in place. See [doc/LEON-PANEL.md](./doc/LEON-PANEL.md).
 >
-> 本仓库的独立版本名为 **Leon Panel**，基于 [Sun-Panel](https://github.com/hslr-s/sun-panel) 公开的 **v1.3.0** 源码。显示版本是 `1.3.0+leon.5`，内部数字版本仍是 `10`，不是官方后续版本（包括 v1.8.1）。上游版权和 MIT 许可证保持不变。说明见 [doc/LEON-PANEL.md](./doc/LEON-PANEL.md)。
+> 本仓库的独立版本名为 **Leon Panel**，基于 [Sun-Panel](https://github.com/hslr-s/sun-panel) 公开的 **v1.3.0** 源码。显示版本是 `1.3.0+leon.6`，内部数字版本仍是 `10`，不是官方后续版本（包括 v1.8.1）。上游版权和 MIT 许可证保持不变。说明见 [doc/LEON-PANEL.md](./doc/LEON-PANEL.md)。
 
 ## 😎 Features
 

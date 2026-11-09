@@ -41,6 +41,20 @@ test('image uploads and the file manager use the category metadata', () => {
   assert.match(source('service/api/api_v1/panel/itemIcon.go'), /FileCategoryIcon/)
 })
 
+test('the public gallery is separate from private files and only an administrator can mark one', () => {
+  const gallery = source('src/components/apps/PublicGallery/index.vue')
+  const manager = source('src/components/apps/UploadFileManager/index.vue')
+  assert.match(gallery, /getPublicList/)
+  assert.match(gallery, /publicFileQuery\(/)
+  assert.doesNotMatch(gallery, /v-html/)
+  assert.match(manager, /setPublic\(/)
+  assert.match(manager, /isAdmin/)
+  assert.match(source('src/views/home/components/EditItem/IconEditor.vue'), /locked-category="icon"/)
+  assert.match(source('src/components/apps/Style/index.vue'), /locked-category="wallpaper"/)
+  assert.match(source('service/api/api_v1/system/file.go'), /PublicFileListScope/)
+  assert.match(source('service/models/file.go'), /SetOwnPublic/)
+})
+
 test('cpu, memory, and disk cards mount and unmount through the shared poll hook', () => {
   for (const path of [
     'src/components/deskModule/SystemMonitor/AppIconSystemMonitor/CPU.vue',

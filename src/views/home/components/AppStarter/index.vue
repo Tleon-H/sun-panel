@@ -54,6 +54,11 @@ const apps = ref<App[]>([
     icon: 'tabler:file-upload',
   },
   {
+    name: t('apps.publicGallery.appName'),
+    componentName: 'PublicGallery',
+    icon: 'lucide:images',
+  },
+  {
     name: t('apps.exportImport.appName'),
     componentName: 'ImportExport',
     icon: 'icon-park-outline-import-and-export',
