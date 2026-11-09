@@ -182,15 +182,10 @@ func CommandRun() {
 }
 
 func Logo() {
-	fmt.Println("     ____            ___                __")
-	fmt.Println("    / __/_ _____    / _ \\___ ____  ___ / /")
-	fmt.Println("   _\\ \\/ // / _ \\  / ___/ _ `/ _ \\/ -_) / ")
-	fmt.Println("  /___/\\_,_/_//_/ /_/   \\_,_/_//_/\\__/_/  ")
+	fmt.Println("Leon Panel")
 	fmt.Println("")
 
 	versionInfo := cmn.GetSysVersionInfo()
 	fmt.Println("Version:", versionInfo.Version)
-	fmt.Println("Welcome to the Sun-Panel.")
-	fmt.Println("Project address:", "https://github.com/hslr-s/sun-panel")
-
+	fmt.Println("Based on Sun-Panel v1.3.0 (MIT):", "https://github.com/hslr-s/sun-panel")
 }

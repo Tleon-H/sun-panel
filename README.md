@@ -1,104 +1,85 @@
-[[ 简体中文 ]](https://doc.sun-panel.top/zh_cn/) |
-[[ English ]](https://doc.sun-panel.top/)
+<div align="center">
 
-<div align=center>
+<img src="./doc/images/logo.png" width="100" height="100" alt="Leon Panel" />
 
-<img src="./doc/images/logo.png" width="100" height="100" />
+# Leon Panel
 
-# Sun-Panel
+基于公开 MIT 源码 Sun-Panel v1.3.0 的独立导航面板。
 
-[![Github](https://img.shields.io/badge/Github-123456?logo=github&labelColor=242424)](https://github.com/hslr-s/sun-panel)
-[![Gitee](https://img.shields.io/badge/Gitee-123456?logo=gitee&labelColor=c71d23)](https://gitee.com/hslr/sun-panel)
-[![docker](https://img.shields.io/badge/docker-123456?logo=docker&logoColor=fff&labelColor=1c7aed)](https://hub.docker.com/r/hslr/sun-panel) 
-[![Bilibili](https://img.shields.io/badge/Bilibili-123456?logo=bilibili&logoColor=fff&labelColor=fb7299)](https://space.bilibili.com/27407696/channel/collectiondetail?sid=2023810)
-[![YouTube](https://img.shields.io/badge/YouTube-123456?logo=youtube&labelColor=ff0000)](https://www.youtube.com/channel/UCKwbFmKU25R602z6P2fgPYg)
-<br>
-[![GitHub User's stars](https://img.shields.io/github/stars/hslr-s%2Fsun-panel?style=flat&logo=github)](https://github.com/hslr-s/sun-panel)
-[![github downloads](https://img.shields.io/github/downloads/hslr-s/sun-panel/total.svg?logo=github)](https://github.com/hslr-s/sun-panel/releases)
-[![docker pulls](https://img.shields.io/docker/pulls/hslr/sun-panel.svg?logo=docker)](https://hub.docker.com/r/hslr/sun-panel)
-
-[[ 中文文档 ]](https://sun-panel-doc.enianteam.com/zh_cn) |
-[[ Document ]](https://sun-panel-doc.enianteam.com) |
-[[ Demo ]](http://sunpaneldemo.enianteam.com) 
-
-A server, NAS navigation panel, Homepage, Browser homepage.
-<br>
-一个服务器、NAS导航面板、Homepage、浏览器首页。
+An independent navigation panel based on the public MIT source of Sun-Panel v1.3.0.
 
 </div>
 
+Leon Panel 是 [Sun-Panel v1.3.0](https://github.com/hslr-s/sun-panel) 公开源码上的独立版本，不是官方仓库，也不是官方 v1.8.1。
 
-![](./doc/images/main-dark.png)
+- 显示版本：`1.3.0+leon.7`
+- 内部数字版本：`10`（原来用来比较版本的数字，这一版保持不变）
 
-> [!IMPORTANT]
-> This repository’s independent build is **Leon Panel**, based on the public MIT source of [Sun-Panel](https://github.com/hslr-s/sun-panel) **v1.3.0**. The display version is `1.3.0+leon.7`; the internal numeric version stays `10`. It is not an official later release, including v1.8.1. The upstream copyright and MIT license stay in place. See [doc/LEON-PANEL.md](./doc/LEON-PANEL.md).
->
-> 本仓库的独立版本名为 **Leon Panel**，基于 [Sun-Panel](https://github.com/hslr-s/sun-panel) 公开的 **v1.3.0** 源码。显示版本是 `1.3.0+leon.7`，内部数字版本仍是 `10`，不是官方后续版本（包括 v1.8.1）。上游版权和 MIT 许可证保持不变。说明见 [doc/LEON-PANEL.md](./doc/LEON-PANEL.md)。
+版权和 MIT 许可证保留在 [LICENSE](./LICENSE)。上游仓库是 [hslr-s/sun-panel](https://github.com/hslr-s/sun-panel)。本仓库没有改许可证，也没有加入或绕过任何授权检查。实现和差异的详细说明见 [doc/LEON-PANEL.md](./doc/LEON-PANEL.md)。
 
-## 😎 Features
+## 界面预览
 
-- 🍉 Clean interface, powerful functionality, low resource consumption
-- 🍊 Easy to use, visual operation, zero-code usage
-- 🍠 One-click switch between internal and external network modes
-- 🍵 Supports Docker deployment (compatible with Arm systems)
-- 🎪 Supports multi-account isolation
-- 🎏 Supports viewing system status
-- 🫙 Supports custom JS, CSS
-- 🍻 Simple usage without the need to connect to an external database
-- 🍾 Rich icon styles for free combination, supports [Iconify icon library](https://icon-sets.iconify.design/)
-- 🚁 Supports opening small windows in the webpage (some third-party websites may block this feature)
+下面的图是本仓库自带的 Leon Panel 界面，基于 Sun-Panel v1.3.0，不是官方后续版本的界面。
 
-## 🖼️ Preview Screenshots
+![Leon Panel 首页，基于 Sun-Panel v1.3.0](./doc/images/main-dark.png)
 
-**Various styles, freely combined**
+**图标样式**
 
-![](./doc/images/icon-small-new.png)
-![](./doc/images/transparent-info.png)
-![](./doc/images/transparent-small.png)
-![](./doc/images/solid-color-info.png)
-![](./doc/images/full-color-small.jpg)
+![小图标](./doc/images/icon-small-new.png)
+![透明详情](./doc/images/transparent-info.png)
+![透明小图标](./doc/images/transparent-small.png)
+![纯色详情](./doc/images/solid-color-info.png)
+![全彩小图标](./doc/images/full-color-small.jpg)
 
-**Built-in small windows**
+**页面内小窗口**
 
-![](./doc/images/window-ssh.png)
-![](./doc/images/window-xunlei.png)
+![SSH 小窗口](./doc/images/window-ssh.png)
+![下载工具小窗口](./doc/images/window-xunlei.png)
 
+## 已实现的独立能力
 
+对照 [doc/LEON-PANEL.md](./doc/LEON-PANEL.md)，这一版在 v1.3.0 之上已经有这些能力：
 
-## 🐳 Deployment tutorial
-[Deployment Tutorial](https://sun-panel-doc.enianteam.com/usage/quick_deploy.html)
+- 界面改进：深色模式下卡片和搜索框有浅色描边，设置页里偏灰的字更亮，手机上的分组按钮不再只靠悬停才出现。已经保存的壁纸、颜色和布局不会被清空。
+- 自定义搜索引擎与排序：登录后可以增加、修改、删除自己的搜索引擎，并用上移、下移调整顺序。
+- 图片分类、按文件名搜索和分页。升级前已有的文件仍是未分类。
+- 批量上传：上传文件管理可以一次选择多张图片。
+- 自有图库与公共图库：项目图标和壁纸可以从当前账号自己的图片里选用；管理员可以把自己的图片标成公共，其他已登录账号可以浏览并选用。
+- 管理员 SQLite 备份导出：只导出，不导入，不恢复，不覆盖现有数据。
+- 多账号切换：在这台浏览器记住多个已登录账号，并在系统应用和登录页切换。不保存密码。
 
-## 🍵 Donate
+## 尚未实现
 
-> Open-source development is not easy. If you feel that my project has helped you, you are welcome to [donate](./doc/donate.md) or buy me a cup of tea☕ (please leave your nickname or name in the note if possible). Your support is my motivation, thank you.
+- 整站覆盖恢复
+- OpenAPI
+- Docker 套接字控制
+- 批量删除
 
+## 构建
 
-<a href="https://www.paypal.me/hslrs">
-<img height="60" src="./doc/images/donate/paypal.png" target="_blank"></img> 
-</a>
+```sh
+pnpm install
+pnpm run test:unit
+pnpm run type-check
+pnpm run build
+cd service
+go test ./assets ./lib/backup ./lib/pollguard ./initialize/systemMonitor ./api/api_v1/system
+```
 
+前端构建结果在 `dist`。服务端需要先按原项目的方式生成嵌入资源，再编译 `service`。
 
-|   |   |
-| ------------ | ------------ |
-| <img height="300" src="./doc/images/donate/weixin.png"/> |  <img height="300" src="./doc/images/donate/alipay.png" /> |
+## 独立测试容器
 
-## 🏖️ Communication group & community
+在本仓库目录执行。它使用新的 `./leon-test-data` 和主机端口 `13002`，不挂载正式数据，也不挂载 Docker 套接字。
 
-Author：**[红烧猎人](https://blog.enianteam.com/u/sun/content/11)**
+```sh
+docker compose -f docker-compose.leon-test.yml up --build
+```
 
-[Github Discussions](https://github.com/hslr-s/sun-panel/discussions)
+浏览器打开 `http://127.0.0.1:13002`。
 
-QQ交流群，进不去可以点上方连接联系作者
+## 许可证与上游署名
 
-<img src="./doc/images/qq_group_qr2.png"  height="350" />
+本仓库使用 MIT 许可证，全文见 [LICENSE](./LICENSE)。
 
-## ❤️ Thanks
-
-- [Roc](https://github.com/RocCheng)
-- [jackloves111](https://github.com/jackloves111)
-- [Rock.L](https://github.com/gitlyp)
-
-
----
-
-[![Star History Chart](https://api.star-history.com/svg?repos=hslr-s/sun-panel&type=Date)](https://star-history.com/#hslr-s/sun-panel&Date)
+上游项目为 [Sun-Panel](https://github.com/hslr-s/sun-panel)，Copyright (c) 2023 红烧猎人。Leon Panel 基于其公开的 v1.3.0 源码修改，不是官方后续版本。

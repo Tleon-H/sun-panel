@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { NButton, NCard, NForm, NFormItem, NGradientText, NInput, NSelect, useMessage } from 'naive-ui'
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { login } from '@/api'
 import { useAppStore, useAuthStore, usePanelState } from '@/store'
 import { SvgIcon } from '@/components/common'
@@ -8,7 +8,8 @@ import { router } from '@/router'
 import { t } from '@/locales'
 import { languageOptions } from '@/utils/defaultData'
 import type { Language } from '@/store/modules/app/helper'
-import { rememberAccount, type AccountSession } from '@/utils/account/sessions'
+import { type AccountSession, rememberAccount } from '@/utils/account/sessions'
+import { setTitle } from '@/utils/cmn'
 import { loadAccountSessions, saveAccountSessions } from '@/utils/account/storage'
 
 // const userStore = useUserStore()
@@ -77,7 +78,12 @@ function handleSubmit() {
 function handleChangeLanuage(value: Language) {
   languageValue.value = value
   appStore.setLanguage(value)
+  setTitle(t('common.appName'))
 }
+
+onMounted(() => {
+  setTitle(t('common.appName'))
+})
 </script>
 
 <template>
@@ -151,7 +157,7 @@ function handleChangeLanuage(value: Language) {
         </div> -->
 
         <div class="flex justify-center text-slate-300">
-          Leon Panel · based on <a href="https://github.com/hslr-s/sun-panel" target="_blank" class="ml-[5px] text-slate-500">Sun-Panel</a>
+          {{ $t('common.appName') }} · {{ $t('login.basedOn') }} <a href="https://github.com/hslr-s/sun-panel" target="_blank" class="ml-[5px] text-slate-500">Sun-Panel</a> v1.3.0
         </div>
       </NForm>
     </NCard>
