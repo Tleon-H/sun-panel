@@ -1,6 +1,7 @@
 import type { AxiosProgressEvent, AxiosResponse, GenericAbortSignal } from 'axios'
 import request from './axios'
 import { apiRespErrMsg, message } from './apiMessage'
+import { prepareHttpRequest } from './payload'
 import { t } from '@/locales'
 import { useAppStore, useAuthStore } from '@/store'
 import { router } from '@/router'
@@ -91,15 +92,15 @@ function http<T = any>(
 
   method = method || 'GET'
 
-  const params = Object.assign(typeof data === 'function' ? data() : data ?? {}, {})
-  if (!headers)
-    headers = {}
-
-  headers.token = authStore.token
-  headers.lang = appStore.language
+  const prepared = prepareHttpRequest({
+    data,
+    headers,
+    token: authStore.token,
+    lang: appStore.language,
+  })
   return method === 'GET'
-    ? request.get(url, { params, signal, onDownloadProgress }).then(successHandler, failHandler)
-    : request.post(url, params, { headers, signal, onDownloadProgress }).then(successHandler, failHandler)
+    ? request.get(url, { params: prepared.data, signal, onDownloadProgress }).then(successHandler, failHandler)
+    : request.post(url, prepared.data, { headers: prepared.headers, signal, onDownloadProgress }).then(successHandler, failHandler)
 }
 
 export function get<T = any>(

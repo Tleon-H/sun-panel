@@ -6,6 +6,7 @@ import { useAuthStore, usePanelState } from '@/store'
 import { set as setUserConfig } from '@/api/panel/userConfig'
 import { PanelPanelConfigStyleEnum } from '@/enums/panel'
 import { t } from '@/locales'
+import OwnGallery from '@/components/apps/OwnGallery/index.vue'
 import PublicGallery from '@/components/apps/PublicGallery/index.vue'
 
 const authStore = useAuthStore()
@@ -13,6 +14,7 @@ const panelState = usePanelState()
 const ms = useMessage()
 const showWallpaperInput = ref(false)
 const showPublicWallpapers = ref(false)
+const showOwnWallpapers = ref(false)
 
 const isSaveing = ref(false)
 
@@ -68,6 +70,11 @@ function handleUploadBackgroundFinish({
 function usePublicWallpaper(src: string) {
   panelState.panelConfig.backgroundImageSrc = src
   showPublicWallpapers.value = false
+}
+
+function useOwnWallpaper(src: string) {
+  panelState.panelConfig.backgroundImageSrc = src
+  showOwnWallpapers.value = false
 }
 
 function uploadCloud() {
@@ -222,9 +229,17 @@ function resetPanelConfig() {
           </div>
         </NUploadDragger>
       </NUpload>
-      <NButton class="mt-2" size="small" data-testid="open-public-wallpapers" @click="showPublicWallpapers = true">
-        {{ $t('apps.publicGallery.open') }}
-      </NButton>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <NButton size="small" data-testid="open-own-wallpapers" @click="showOwnWallpapers = true">
+          {{ $t('apps.ownGallery.open') }}
+        </NButton>
+        <NButton size="small" data-testid="open-public-wallpapers" @click="showPublicWallpapers = true">
+          {{ $t('apps.publicGallery.open') }}
+        </NButton>
+      </div>
+      <NModal v-model:show="showOwnWallpapers" preset="card" :title="$t('apps.ownGallery.title')" style="width: min(720px, 96vw);">
+        <OwnGallery selectable @select="useOwnWallpaper" />
+      </NModal>
       <NModal v-model:show="showPublicWallpapers" preset="card" :title="$t('apps.publicGallery.appName')" style="width: min(720px, 96vw);">
         <PublicGallery locked-category="wallpaper" selectable @select="usePublicWallpaper" />
       </NModal>

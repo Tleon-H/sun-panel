@@ -121,6 +121,13 @@
       "deleteWarnText": "Are you sure you want to delete this group [{name}]? The application icons in this group will be lost after deletion.",
       "groupName": "Group name"
     },
+    "ownGallery": {
+      "alert": "This list shows only images uploaded by the current account. Other people's images are not here, including images they have made public. Those stay in the public gallery. Choosing one saves the address only. It does not change who owns the file, and it does not make the image public.",
+      "empty": "You have not uploaded any images yet",
+      "open": "Choose from my images",
+      "pick": "Use",
+      "title": "My images"
+    },
     "publicGallery": {
       "alert": "This list shows only images an administrator has marked public. Other people's private images do not appear here. Choosing one saves its address on your own icon or wallpaper.",
       "appName": "Public gallery",
@@ -133,7 +140,11 @@
       "unpublish": "Make private"
     },
     "uploadsFileManager": {
-      "alertText": "Filter your own uploads by icon, wallpaper, or uncategorized. Changing a category only changes the label. It does not move the file or change its link.",
+      "alertText": "Filter your own uploads by icon, wallpaper, or uncategorized. This list contains only the current account and does not include other people's public images. Changing a category only changes the label. It does not move the file or change its link. You can set an existing image as the wallpaper without uploading it again.",
+      "batchFailed": "These files were not saved: {names}",
+      "batchHint": "You can select several images at once. Images uploaded here stay uncategorized. An upload from the icon entry is still stored as an icon, and an upload from the wallpaper entry is still stored as wallpaper.",
+      "batchSaved": "Uploaded {count} images as uncategorized.",
+      "batchUpload": "Upload several",
       "appName": "Upload File Management",
       "category": {
         "all": "All",

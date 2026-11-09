@@ -3,6 +3,7 @@ import { NButton, NColorPicker, NInput, NModal, NRadio, NUpload } from 'naive-ui
 import type { UploadFileInfo } from 'naive-ui'
 import { computed, defineProps, ref } from 'vue'
 import { ItemIcon } from '@/components/common'
+import OwnGallery from '@/components/apps/OwnGallery/index.vue'
 import PublicGallery from '@/components/apps/PublicGallery/index.vue'
 import { useAuthStore } from '@/store'
 import { apiRespErrMsg } from '@/utils/request/apiMessage'
@@ -15,6 +16,7 @@ const emit = defineEmits<{
 }>()
 const authStore = useAuthStore()
 const showPublicIcons = ref(false)
+const showOwnIcons = ref(false)
 
 // 默认图标背景色
 const defautSwatchesBackground = [
@@ -88,6 +90,12 @@ function usePublicIcon(src: string) {
   emit('update:itemIcon', itemIconInfo.value || null)
   showPublicIcons.value = false
 }
+
+function useOwnIcon(src: string) {
+  itemIconInfo.value.src = src
+  emit('update:itemIcon', itemIconInfo.value || null)
+  showOwnIcons.value = false
+}
 </script>
 
 <template>
@@ -121,7 +129,7 @@ function usePublicIcon(src: string) {
       </NRadio>
     </div>
 
-    <div class=" h-[100px]">
+    <div class="min-h-[100px]">
       <div class="flex">
         <div>
           <div class="border rounded-2xl bg-slate-200 overflow-hidden rounded-2xl transparent-grid">
@@ -162,9 +170,17 @@ function usePublicIcon(src: string) {
                 {{ $t('iconItem.selectUpload') }}
               </NButton>
             </NUpload>
-            <NButton class="mt-1" size="small" data-testid="open-public-icons" @click="showPublicIcons = true">
-              {{ $t('apps.publicGallery.open') }}
-            </NButton>
+            <div class="mt-1 flex flex-wrap gap-2">
+              <NButton size="small" data-testid="open-own-icons" @click="showOwnIcons = true">
+                {{ $t('apps.ownGallery.open') }}
+              </NButton>
+              <NButton size="small" data-testid="open-public-icons" @click="showPublicIcons = true">
+                {{ $t('apps.publicGallery.open') }}
+              </NButton>
+            </div>
+            <NModal v-model:show="showOwnIcons" preset="card" :title="$t('apps.ownGallery.title')" style="width: min(720px, 96vw);">
+              <OwnGallery selectable @select="useOwnIcon" />
+            </NModal>
             <NModal v-model:show="showPublicIcons" preset="card" :title="$t('apps.publicGallery.appName')" style="width: min(720px, 96vw);">
               <PublicGallery locked-category="icon" selectable @select="usePublicIcon" />
             </NModal>
