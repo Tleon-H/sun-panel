@@ -372,9 +372,22 @@ func TestPublicGalleryShowsOnlyMarkedFiles(t *testing.T) {
 	if visitor := asFileRole(t, api.SetPublic, fmt.Sprintf(`{"id":%d,"public":true}`, privateFile.ID), 0, 0); visitor["code"] != float64(1000) {
 		t.Fatalf("visitor publish %#v", visitor)
 	}
-	removed := asFileUser(t, api.Deletes, fmt.Sprintf(`{"ids":[%d]}`, wallpaper.ID), 7)
+	uploadRoot := t.TempDir()
+	wallPath := filepath.Join(uploadRoot, "public-wall.png")
+	if err := os.WriteFile(wallPath, []byte("wall"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Model(&models.File{}).Where("id = ?", wallpaper.ID).Update("src", wallPath).Error; err != nil {
+		t.Fatal(err)
+	}
+	restoreUploads := useConfig(t, "[base]\nsource_path="+uploadRoot+"\n")
+	t.Cleanup(restoreUploads)
+	removed := asFileUser(t, api.Deletes, fmt.Sprintf(`{"ids":[%d],"confirm":%q}`, wallpaper.ID, DeleteOwnFilesConfirm), 7)
 	if removed["code"] != float64(0) {
 		t.Fatalf("delete %#v", removed)
+	}
+	if _, err := os.Stat(wallPath); !os.IsNotExist(err) {
+		t.Fatalf("deleted wallpaper file remained: %v", err)
 	}
 	if names := publicNames(t, asFileRole(t, api.PublicList, `{}`, 8, 2)); len(names) != 0 {
 		t.Fatalf("deleted public file remained %#v", names)
