@@ -65,7 +65,7 @@ func TestRestoreAcceptsHistoricalManifestAndRejectsIncompatiblePackages(t *testi
 			m.Version = "1.8.1"
 			m.VersionCode = 18
 		}},
-		{"newer", func(m *Manifest) { m.Version = "1.3.0+leon.9" }},
+		{"newer", func(m *Manifest) { m.Version = "1.3.0+leon.10" }},
 		{"schema", func(m *Manifest) { m.VersionCode = 11 }},
 		{"official flag", func(m *Manifest) { m.CompatibleWithOfficial181 = true }},
 	}
@@ -228,7 +228,7 @@ func restoreOpt(base string, db *sql.DB, tempParent string) RestoreOptions {
 		ConfFile:      filepath.Join("conf", "conf.ini"),
 		CustomDir:     filepath.Join("web", "custom"),
 		SQLitePath:    filepath.Join("database", "database.db"),
-		Version:       "1.3.0+leon.8",
+		Version:       "1.3.0+leon.9",
 		VersionCode:   10,
 		DB:            db,
 		TempParent:    tempParent,

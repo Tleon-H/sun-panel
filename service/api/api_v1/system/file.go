@@ -5,7 +5,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"sun-panel/api/api_v1/common/apiData/commonApiStructs"
 	"sun-panel/api/api_v1/common/apiReturn"
 	"sun-panel/api/api_v1/common/base"
 	"sun-panel/global"
@@ -15,7 +14,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
-	"gorm.io/gorm"
 )
 
 type FileApi struct{}
@@ -301,37 +299,48 @@ func (a *FileApi) UpdateCategory(c *gin.Context) {
 }
 
 func (a *FileApi) Deletes(c *gin.Context) {
-	req := commonApiStructs.RequestDeleteIds[uint]{}
 	userInfo, ok := base.GetCurrentUserInfo(c)
 	if !ok || userInfo.ID == 0 {
 		apiReturn.ErrorByCode(c, 1000)
 		return
 	}
+	req := struct {
+		Ids     []uint `json:"ids"`
+		Confirm string `json:"confirm"`
+		UserId  uint   `json:"userId"`
+	}{}
 	if err := c.ShouldBindBodyWith(&req, binding.JSON); err != nil {
-		apiReturn.ErrorParamFomat(c, err.Error())
+		apiReturn.ErrorByCode(c, 1400)
 		return
 	}
-
-	global.Db.Transaction(func(tx *gorm.DB) error {
-		files := []models.File{}
-
-		if err := tx.Order("created_at desc").Find(&files, "user_id=? AND id in ?", userInfo.ID, req.Ids).Error; err != nil {
-			return err
-		}
-
-		for _, v := range files {
-			os.Remove(v.Src)
-		}
-
-		if err := tx.Order("created_at desc").Delete(&files, "user_id=? AND id in ?", userInfo.ID, req.Ids).Error; err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	apiReturn.Success(c)
-
+	// An account id in the body cannot delete another account's files, even for an administrator.
+	_ = req.UserId
+	if strings.TrimSpace(req.Confirm) != DeleteOwnFilesConfirm {
+		apiReturn.Error(c, "删除图片需要再次确认。这次没有删除任何内容。")
+		return
+	}
+	if len(req.Ids) == 0 {
+		apiReturn.ErrorByCode(c, 1400)
+		return
+	}
+	if len(req.Ids) > DeleteOwnFilesMaxIDs {
+		apiReturn.Error(c, "一次最多删除 100 张图片。这次没有删除任何内容。")
+		return
+	}
+	root := ""
+	if global.Config != nil {
+		root = global.Config.GetValueString("base", "source_path")
+	}
+	result, err := deleteOwnFiles(global.Db, userInfo.ID, root, req.Ids)
+	if err != nil {
+		apiReturn.ErrorDatabase(c, err.Error())
+		return
+	}
+	if len(result.Failed) > 0 {
+		apiReturn.ErrorCode(c, -1, "有图片没有删除。", result)
+		return
+	}
+	apiReturn.SuccessData(c, result)
 }
 
 func uploadCategory(raw string) (string, bool) {

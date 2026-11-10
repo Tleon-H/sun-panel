@@ -1,5 +1,6 @@
 import { post } from '@/utils/request'
 import { publicFileQuery, type FileCategory, type FileListRequest } from '@/utils/file/category'
+import { deleteOwnFilesConfirm } from '@/utils/file/selection'
 
 export function getList<T>(query?: Partial<FileListRequest>) {
   return post<T>({
@@ -32,7 +33,7 @@ export function updateCategory<T>(id: number, category: string) {
 export function deletes<T>(ids: number[]) {
   return post<T>({
     url: '/file/deletes',
-    data: { ids },
+    data: { ids, confirm: deleteOwnFilesConfirm },
   })
 }
 
