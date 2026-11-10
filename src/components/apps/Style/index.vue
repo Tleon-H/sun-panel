@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import type { UploadFileInfo } from 'naive-ui'
-import { NButton, NCard, NColorPicker, NGrid, NGridItem, NInput, NInputGroup, NModal, NPopconfirm, NSelect, NSlider, NSwitch, NUpload, NUploadDragger, useMessage } from 'naive-ui'
+import { NButton, NCard, NColorPicker, NGrid, NGridItem, NInput, NInputGroup, NInputNumber, NModal, NPopconfirm, NSelect, NSlider, NSwitch, NUpload, NUploadDragger, useMessage } from 'naive-ui'
 import { useAuthStore, usePanelState } from '@/store'
 import { set as setUserConfig } from '@/api/panel/userConfig'
 import { PanelPanelConfigStyleEnum } from '@/enums/panel'
 import { t } from '@/locales'
 import OwnGallery from '@/components/apps/OwnGallery/index.vue'
 import PublicGallery from '@/components/apps/PublicGallery/index.vue'
+import { maxWidthControlValue, maxWidthFromControl } from '@/utils/panel/maxWidth'
 
 const authStore = useAuthStore()
 const panelState = usePanelState()
@@ -75,6 +76,10 @@ function usePublicWallpaper(src: string) {
 function useOwnWallpaper(src: string) {
   panelState.panelConfig.backgroundImageSrc = src
   showOwnWallpapers.value = false
+}
+
+function updateMaxWidth(value: number | null) {
+  panelState.panelConfig.maxWidth = maxWidthFromControl(value)
 }
 
 function uploadCloud() {
@@ -281,7 +286,7 @@ function resetPanelConfig() {
             <span class="mr-[10px]">{{ $t('apps.baseSettings.maxWidth') }}</span>
             <div class="flex">
               <NInputGroup>
-                <NInput v-model:value="panelState.panelConfig.maxWidth" size="small" type="number" :maxlength="10" :style="{ width: '100px' }" placeholder="1200" />
+                <NInputNumber :value="maxWidthControlValue(panelState.panelConfig.maxWidth)" size="small" :show-button="false" :style="{ width: '100px' }" placeholder="1200" @update:value="updateMaxWidth" />
                 <NSelect v-model:value="panelState.panelConfig.maxWidthUnit" :style="{ width: '80px' }" :options="maxWidthUnitOption" size="small" />
               </NInputGroup>
             </div>

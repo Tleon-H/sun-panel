@@ -55,6 +55,13 @@ func TestRestoreAcceptsHistoricalManifestAndRejectsIncompatiblePackages(t *testi
 	}
 	assertLive(t, base, db, false)
 
+	previous := buildPackage(t, base, db, "1.3.0+leon.9")
+	mutateLive(t, base, db)
+	if err := Restore(context.Background(), restoreOpt(base, db, ""), bytes.NewReader(previous)); err != nil {
+		t.Fatal(err)
+	}
+	assertLive(t, base, db, false)
+
 	mutateLive(t, base, db)
 	cases := []struct {
 		name string
@@ -65,7 +72,7 @@ func TestRestoreAcceptsHistoricalManifestAndRejectsIncompatiblePackages(t *testi
 			m.Version = "1.8.1"
 			m.VersionCode = 18
 		}},
-		{"newer", func(m *Manifest) { m.Version = "1.3.0+leon.10" }},
+		{"newer", func(m *Manifest) { m.Version = "1.3.0+leon.11" }},
 		{"schema", func(m *Manifest) { m.VersionCode = 11 }},
 		{"official flag", func(m *Manifest) { m.CompatibleWithOfficial181 = true }},
 	}
@@ -228,7 +235,7 @@ func restoreOpt(base string, db *sql.DB, tempParent string) RestoreOptions {
 		ConfFile:      filepath.Join("conf", "conf.ini"),
 		CustomDir:     filepath.Join("web", "custom"),
 		SQLitePath:    filepath.Join("database", "database.db"),
-		Version:       "1.3.0+leon.9",
+		Version:       "1.3.0+leon.10",
 		VersionCode:   10,
 		DB:            db,
 		TempParent:    tempParent,
