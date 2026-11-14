@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { VueDraggable } from 'vue-draggable-plus'
 import { NBackTop, NButton, NButtonGroup, NDropdown, NModal, NSkeleton, NSpin, useDialog, useMessage } from 'naive-ui'
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { AppIcon, AppStarter, EditItem } from './components'
 import { Clock, SearchBox, SystemMonitor } from '@/components/deskModule'
 import { SvgIcon } from '@/components/common'
@@ -16,6 +16,7 @@ import { VisitMode } from '@/enums/auth'
 import { router } from '@/router'
 import { t } from '@/locales'
 import { contentMaxWidth } from '@/utils/panel/maxWidth'
+import { resolveGroupIconStyle } from '@/utils/panel/groupIconStyle'
 
 interface ItemGroup extends Panel.ItemIconGroup {
   sortStatus?: boolean
@@ -48,6 +49,11 @@ const currentAddItenIconGroupId = ref<number | undefined>()
 const settingModalShow = ref(false)
 
 const items = ref<ItemGroup[]>([])
+
+function groupIconStyle(group: ItemGroup) {
+  return resolveGroupIconStyle(group.iconStyle, panelState.panelConfig.iconStyle)
+}
+
 const filterItems = ref<ItemGroup[]>([])
 const searchKeyword = ref('')
 const searchMatches = ref<Panel.ItemInfo[]>([])
@@ -272,6 +278,12 @@ function getDropdownMenuOptions() {
   return dropdownMenuOptions
 }
 
+watch(settingModalShow, (visible) => {
+  if (visible || items.value.some(group => group.sortStatus))
+    return
+  getList()
+})
+
 onMounted(() => {
   // 更新用户信息
   updateLocalUserInfo()
@@ -437,7 +449,7 @@ function handleAddItem(itemIconGroupId?: number) {
             </div>
 
             <!-- 详情图标 -->
-            <div v-if="panelState.panelConfig.iconStyle === PanelPanelConfigStyleEnum.info">
+            <div v-if="groupIconStyle(itemGroup) === PanelPanelConfigStyleEnum.info">
               <div v-if="itemGroup.items">
                 <VueDraggable
                   v-model="itemGroup.items" item-key="sort" :animation="300"
@@ -473,7 +485,7 @@ function handleAddItem(itemIconGroupId?: number) {
             </div>
 
             <!-- APP图标宫型盒子 -->
-            <div v-if="panelState.panelConfig.iconStyle === PanelPanelConfigStyleEnum.icon">
+            <div v-if="groupIconStyle(itemGroup) === PanelPanelConfigStyleEnum.icon">
               <div v-if="itemGroup.items">
                 <VueDraggable
                   v-model="itemGroup.items" item-key="sort" :animation="300"

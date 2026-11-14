@@ -11,6 +11,7 @@ import (
 	"sun-panel/global"
 	"sun-panel/lib/backup"
 	"sun-panel/lib/cmn"
+	"sun-panel/models"
 
 	"github.com/gin-gonic/gin"
 )
@@ -185,6 +186,11 @@ func (a *BackupApi) restoreAt(c *gin.Context, baseDir, version string, versionCo
 	}, opened)
 	if err != nil {
 		apiReturn.Error(c, restoreMessage(err))
+		return
+	}
+	// 旧备份没有分组卡片样式这一列。补上可空列后，那些分组继续跟随全局样式。
+	if err := models.EnsureItemIconGroupIconStyle(global.Db); err != nil {
+		apiReturn.Error(c, "备份已经覆盖，但分组卡片样式字段没有补上。请重启后再试。当前服务仍在运行。")
 		return
 	}
 	apiReturn.Success(c)
