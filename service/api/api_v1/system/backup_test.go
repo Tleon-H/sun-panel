@@ -492,7 +492,7 @@ func callRestore(t *testing.T, api *BackupApi, user *models.User, confirm string
 	if baseDir == "" {
 		api.Restore(ctx)
 	} else {
-		api.restoreAt(ctx, baseDir, "1.3.0+leon.9", 10)
+		api.restoreAt(ctx, baseDir, "1.3.0+leon.10", 10)
 	}
 	response := exportResponse{status: recorder.Code, body: recorder.Body.String()}
 	if strings.HasPrefix(response.body, "{") {

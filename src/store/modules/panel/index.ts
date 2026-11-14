@@ -3,6 +3,7 @@ import { defaultState, defaultStatePanelConfig, getLocalState, removeLocalState,
 import { router } from '@/router'
 import type { PanelStateNetworkModeEnum } from '@/enums'
 import { get as getUserConfig } from '@/api/panel/userConfig'
+import { normalizeMaxWidth } from '@/utils/panel/maxWidth'
 export const usePanelState = defineStore('panel', {
   state: (): Panel.State => getLocalState() || defaultState(),
 
@@ -29,8 +30,11 @@ export const usePanelState = defineStore('panel', {
     // 获取云端（搭建的服务器）的面板配置
     updatePanelConfigByCloud() {
       getUserConfig<Panel.userConfig>().then((res) => {
-        if (res.code === 0)
-          this.panelConfig = { ...defaultStatePanelConfig(), ...res.data.panel }
+        if (res.code === 0) {
+          const panel = { ...defaultStatePanelConfig(), ...res.data.panel }
+          panel.maxWidth = normalizeMaxWidth(panel.maxWidth)
+          this.panelConfig = panel
+        }
         else
           this.resetPanelConfig() // 重置恢复默认
         this.recordState()

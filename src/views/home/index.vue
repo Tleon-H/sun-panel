@@ -15,6 +15,7 @@ import { PanelPanelConfigStyleEnum, PanelStateNetworkModeEnum } from '@/enums'
 import { VisitMode } from '@/enums/auth'
 import { router } from '@/router'
 import { t } from '@/locales'
+import { contentMaxWidth } from '@/utils/panel/maxWidth'
 
 interface ItemGroup extends Panel.ItemIconGroup {
   sortStatus?: boolean
@@ -361,7 +362,7 @@ function handleAddItem(itemIconGroupId?: number) {
         :style="{
           marginTop: `${panelState.panelConfig.marginTop}%`,
           marginBottom: `${panelState.panelConfig.marginBottom}%`,
-          maxWidth: (panelState.panelConfig.maxWidth ?? '1200') + panelState.panelConfig.maxWidthUnit,
+          maxWidth: contentMaxWidth(panelState.panelConfig.maxWidth, panelState.panelConfig.maxWidthUnit),
         }"
       >
         <!-- 头 -->
