@@ -1,4 +1,5 @@
 import { ss } from '@/utils/storage'
+import { normalizeMaxWidth } from '@/utils/panel/maxWidth'
 import { PanelPanelConfigStyleEnum, PanelStateNetworkModeEnum } from '@/enums'
 import defaultBackground from '@/assets/defaultBackground.webp'
 const LOCAL_NAME = 'panelStorage'
@@ -44,7 +45,12 @@ export function defaultState(): Panel.State {
 
 export function getLocalState(): Panel.State {
   const localState = ss.get(LOCAL_NAME)
-  return { ...defaultState(), ...localState }
+  const state = { ...defaultState(), ...localState }
+  state.panelConfig = {
+    ...state.panelConfig,
+    maxWidth: normalizeMaxWidth(state.panelConfig?.maxWidth),
+  }
+  return state
 }
 
 export function setLocalState(state: Panel.State) {

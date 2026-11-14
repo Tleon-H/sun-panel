@@ -1,6 +1,27 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { contentMaxWidth, maxWidthControlValue, maxWidthFromControl } from './maxWidth.ts'
+import { contentMaxWidth, maxWidthControlValue, maxWidthFromControl, normalizeMaxWidth } from './maxWidth.ts'
+
+test('saved widths use one normalization for the page and the settings control', () => {
+  const cases: Array<{ value: unknown; width: number | undefined; css: string }> = [
+    { value: '960', width: 960, css: '960px' },
+    { value: '  960  ', width: 960, css: '960px' },
+    { value: 960, width: 960, css: '960px' },
+    { value: '', width: undefined, css: '1200px' },
+    { value: '   ', width: undefined, css: '1200px' },
+    { value: 0, width: 0, css: '0px' },
+    { value: '0', width: 0, css: '0px' },
+    { value: 'abc', width: undefined, css: '1200px' },
+    { value: null, width: undefined, css: '1200px' },
+    { value: undefined, width: undefined, css: '1200px' },
+  ]
+
+  for (const item of cases) {
+    assert.equal(normalizeMaxWidth(item.value), item.width)
+    assert.equal(maxWidthControlValue(item.value), item.width === undefined ? null : item.width)
+    assert.equal(contentMaxWidth(item.value, 'px'), item.css)
+  }
+})
 
 test('an existing max width stays a number, including zero', () => {
   assert.equal(maxWidthControlValue(960), 960)

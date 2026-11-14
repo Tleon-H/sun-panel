@@ -1,19 +1,28 @@
-// maxWidth is stored as a number. The settings control can also be cleared.
-// An empty control is not a string and is not zero: the page then uses 1200.
+// Older builds saved maxWidth through a text input, so stored values may be
+// numbers or numeric strings. Empty and invalid values stay unset; zero is kept.
 
-export function maxWidthControlValue(value: number | undefined): number | null {
-  if (typeof value !== 'number' || Number.isNaN(value))
-    return null
-  return value
+export function normalizeMaxWidth(value: unknown): number | undefined {
+  if (typeof value === 'number')
+    return Number.isFinite(value) ? value : undefined
+  if (typeof value !== 'string')
+    return undefined
+  const trimmed = value.trim()
+  if (trimmed === '')
+    return undefined
+  const parsed = Number(trimmed)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+export function maxWidthControlValue(value: unknown): number | null {
+  const width = normalizeMaxWidth(value)
+  return width === undefined ? null : width
 }
 
 export function maxWidthFromControl(value: number | null): number | undefined {
-  if (typeof value !== 'number' || Number.isNaN(value))
-    return undefined
-  return value
+  return normalizeMaxWidth(value)
 }
 
-export function contentMaxWidth(value: number | undefined, unit: string): string {
-  const width = maxWidthControlValue(value) ?? 1200
+export function contentMaxWidth(value: unknown, unit: string): string {
+  const width = normalizeMaxWidth(value) ?? 1200
   return `${width}${unit}`
 }
