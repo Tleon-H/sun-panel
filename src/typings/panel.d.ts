@@ -19,6 +19,8 @@ declare namespace Panel {
         icon?: string
         title?: string
         sort?:number
+        /** 未设置时跟随全局图标样式。0 是详情大卡片，1 是小图标。 */
+        iconStyle?: number | null
     }
 
     interface ItemIcon {

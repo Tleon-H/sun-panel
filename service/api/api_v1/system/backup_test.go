@@ -23,7 +23,19 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
+
+type legacyBackupGroup struct {
+	models.BaseModel
+	Icon        string
+	Title       string
+	Description string
+	Sort        int
+	UserId      uint
+}
+
+func (legacyBackupGroup) TableName() string { return "item_icon_group" }
 
 func TestExportMessageUsesTheActualFailure(t *testing.T) {
 	cases := []struct {
@@ -492,7 +504,7 @@ func callRestore(t *testing.T, api *BackupApi, user *models.User, confirm string
 	if baseDir == "" {
 		api.Restore(ctx)
 	} else {
-		api.restoreAt(ctx, baseDir, "1.3.0+leon.10", 10)
+		api.restoreAt(ctx, baseDir, "1.3.0+leon.11", 10)
 	}
 	response := exportResponse{status: recorder.Code, body: recorder.Body.String()}
 	if strings.HasPrefix(response.body, "{") {
@@ -504,6 +516,95 @@ func callRestore(t *testing.T, api *BackupApi, user *models.User, confirm string
 		}
 	}
 	return response
+}
+
+func TestLegacyBackupGainsAnEmptyGroupIconStyle(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	base := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(base, "uploads"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(base, "uploads", "keep.txt"), []byte("INSIDE-OK"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(base, "conf"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	conf := "[base]\ndatabase_drive=sqlite\nsource_path=./uploads\n[sqlite]\nfile_path=./database/database.db\n"
+	if err := os.WriteFile(filepath.Join(base, "conf", "conf.ini"), []byte(conf), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(base, "web", "custom"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(base, "web", "custom", "index.css"), []byte("/* example */"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dbPath := filepath.Join(base, "database", "database.db")
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	gormDB, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
+		NamingStrategy: schema.NamingStrategy{SingularTable: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := gormDB.AutoMigrate(&legacyBackupGroup{}); err != nil {
+		t.Fatal(err)
+	}
+	legacy := legacyBackupGroup{Title: "HOME", UserId: 7, Sort: 1}
+	if err := gormDB.Create(&legacy).Error; err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := gormDB.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+	t.Cleanup(func() { _ = sqlDB.Close() })
+	previous := global.Db
+	global.Db = gormDB
+	t.Cleanup(func() { global.Db = previous })
+	restore := useConfig(t, conf)
+	defer restore()
+
+	result, err := backup.Build(context.Background(), backup.Options{
+		BaseDir:       base,
+		DatabaseDrive: "sqlite",
+		UploadsPath:   "uploads",
+		ConfFile:      filepath.Join("conf", "conf.ini"),
+		CustomDir:     filepath.Join("web", "custom"),
+		SQLitePath:    filepath.Join("database", "database.db"),
+		Version:       "1.3.0+leon.10",
+		VersionCode:   10,
+		DB:            sqlDB,
+		TempParent:    t.TempDir(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(result.Dir) })
+	archive, err := os.ReadFile(result.ZipPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := gormDB.Model(&legacyBackupGroup{}).Where("id = ?", legacy.ID).Update("title", "changed").Error; err != nil {
+		t.Fatal(err)
+	}
+
+	admin := models.User{BaseModel: models.BaseModel{ID: 1}, Role: 1}
+	response := callRestore(t, &BackupApi{}, &admin, backup.ConfirmOverwrite, archive, base)
+	if response.code != 0 {
+		t.Fatalf("restore %#v", response.body)
+	}
+	var saved models.ItemIconGroup
+	if err := gormDB.First(&saved, legacy.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if saved.Title != "HOME" || saved.UserId != 7 || saved.IconStyle != nil {
+		t.Fatalf("restored group = %#v", saved)
+	}
 }
 
 func useConfig(t *testing.T, contents string) func() {

@@ -123,7 +123,10 @@
     },
     "itemGroupManage": {
       "appName": "分组管理",
+      "cardStyle": "卡片样式",
+      "cardStyleHint": "选择跟随全局时，这个分组使用风格设置里的图标样式。",
       "deleteWarnText": "你确定删除此分组[{name}]，删除后此分组应用图标将丢失？",
+      "followGlobal": "跟随全局",
       "groupName": "分组名称"
     },
     "ownGallery": {

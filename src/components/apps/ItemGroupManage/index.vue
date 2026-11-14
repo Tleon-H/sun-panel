@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import type { FormInst, FormRules } from 'naive-ui'
-import { NButton, NCard, NForm, NFormItem, NInput, useDialog, useMessage } from 'naive-ui'
+import { NButton, NCard, NForm, NFormItem, NInput, NSelect, useDialog, useMessage } from 'naive-ui'
 import { VueDraggable } from 'vue-draggable-plus'
 import { deletes, edit, getList, saveSort } from '@/api/panel/itemIconGroup'
 import { RoundCardModal, SvgIcon } from '@/components/common'
 import { t } from '@/locales'
+import { groupIconStyleControlValue, groupIconStyleFollow, groupIconStyleSelectOptions, normalizeGroupIconStyle } from '@/utils/panel/groupIconStyle'
 
 interface EditModalArg {
   show: boolean
@@ -25,6 +26,9 @@ const defaultMNodal = {
   sort: 9999,
 }
 
+const groupStyleValue = ref(groupIconStyleFollow)
+const groupStyleOptions = computed(() => groupIconStyleSelectOptions(key => t(key)))
+
 const editModalArg = ref<EditModalArg>({
   show: false,
   editStatus: 1,
@@ -43,12 +47,16 @@ const editModalArg = ref<EditModalArg>({
 const groups = ref<Panel.ItemIconGroup[]>([])
 
 function handleAddGroup() {
-  editModalArg.value.show = !editModalArg.value.show
+  editModalArg.value.editStatus = 1
+  editModalArg.value.model = { ...defaultMNodal }
+  groupStyleValue.value = groupIconStyleFollow
+  editModalArg.value.show = true
 }
 
 function handleEditGroup(groupInfo: Panel.ItemIconGroup) {
   editModalArg.value.show = true
-  editModalArg.value.model = groupInfo
+  editModalArg.value.model = { ...groupInfo }
+  groupStyleValue.value = groupIconStyleControlValue(groupInfo.iconStyle)
   editModalArg.value.editStatus = 2
 }
 
@@ -99,7 +107,11 @@ function handleDelete(groupInfo: Panel.ItemIconGroup) {
 function handleSaveGroup() {
   formRef.value?.validate((errors) => {
     if (!errors) {
-      edit(editModalArg.value.model).then(({ code, msg }) => {
+      const payload: Panel.ItemIconGroup = {
+        ...editModalArg.value.model,
+        iconStyle: normalizeGroupIconStyle(groupStyleValue.value),
+      }
+      edit(payload).then(({ code, msg }) => {
         if (code !== 0)
           ms.error(msg)
 
@@ -184,6 +196,14 @@ onMounted(() => {
       <NForm ref="formRef" :model="editModalArg.model" :rules="editModalArg.rules">
         <NFormItem path="title" :label="$t('apps.itemGroupManage.groupName')">
           <NInput v-model:value="editModalArg.model.title" type="text" :maxlength="20" show-count />
+        </NFormItem>
+        <NFormItem :label="$t('apps.itemGroupManage.cardStyle')">
+          <div class="w-full">
+            <NSelect v-model:value="groupStyleValue" :options="groupStyleOptions" />
+            <div class="text-slate-500 text-xs mt-1">
+              {{ $t('apps.itemGroupManage.cardStyleHint') }}
+            </div>
+          </div>
         </NFormItem>
 
         <!-- <NFormItem path="name" label="昵称">

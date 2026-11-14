@@ -10,8 +10,8 @@ function source(path: string): string {
   return readFileSync(join(root, path), 'utf8')
 }
 
-test('the visible product name is Leon Panel and the version stays 1.3.0+leon.10', () => {
-  assert.equal(source('service/assets/version').trim(), '10|1.3.0+leon.10')
+test('the visible product name is Leon Panel and the version stays 1.3.0+leon.11', () => {
+  assert.equal(source('service/assets/version').trim(), '10|1.3.0+leon.11')
 
   const html = source('index.html')
   assert.match(html, /<title>Leon Panel<\/title>/)
@@ -49,7 +49,7 @@ test('the visible product name is Leon Panel and the version stays 1.3.0+leon.10
 
   const readme = source('README.md')
   assert.match(readme, /^# Leon Panel/m)
-  assert.match(readme, /1\.3\.0\+leon\.10/)
+  assert.match(readme, /1\.3\.0\+leon\.11/)
   assert.match(readme, /内部数字版本：`10`/)
   assert.match(readme, /整站覆盖恢复/)
   assert.match(readme, /OpenAPI/)
